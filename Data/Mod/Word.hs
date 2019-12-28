@@ -25,8 +25,10 @@ module Data.Mod.Word
   , (^%)
   ) where
 
+import Prelude as P hiding (even)
 import Control.Exception
 import Control.DeepSeq
+import Data.Bits
 #ifdef MIN_VERSION_semirings
 import Data.Euclidean (GcdDomain(..), Euclidean(..), Field)
 import Data.Ratio
@@ -34,7 +36,6 @@ import Data.Semiring (Semiring(..), Ring(..))
 #endif
 import GHC.Exts
 import GHC.Generics
-import GHC.Integer.GMP.Internals
 import GHC.Natural (Natural(..))
 
 #if MIN_VERSION_base(4,11,0)
@@ -181,7 +182,7 @@ instance KnownNat m => Semiring (Mod m) where
   {-# INLINE fromNatural #-}
 
 instance KnownNat m => Ring (Mod m) where
-  negate = Prelude.negate
+  negate = P.negate
   {-# INLINE negate #-}
 
 -- | See the warning about division above.
@@ -227,14 +228,86 @@ instance KnownNat m => Field (Mod m)
 -- >>> invertMod 4 :: Mod 10
 -- Nothing -- because 4 and 10 are not coprime
 invertMod :: KnownNat m => Mod m -> Maybe (Mod m)
--- TODO reimplement natively?
-invertMod mx
-  = if y <= 0
-    then Nothing
-    else Just $ Mod $ fromInteger y
+invertMod mx@(Mod x) = case natVal mx of
+  NatJ#{}   -> tooLargeModulo
+  NatS# 0## -> Nothing
+  NatS# m#  -> Mod <$> invertModWord x (W# m#)
+
+invertModWord :: Word -> Word -> Maybe Word
+invertModWord x m@(W# m#)
+  -- If both x and k are even, no inverse exists
+  | even x, isTrue# (k# `gtWord#` 0##) = Nothing
+  | otherwise = case invertModWordOdd x m' of
+    Nothing -> Nothing
+    -- goDouble cares only about mod 2^k,
+    -- so overflows and underflows in (1 - x * y) are fine
+    Just y -> Just $ goDouble y (1 - x * y)
   where
-    y = recipModInteger (toInteger (unMod mx)) (toInteger (natVal mx))
-{-# INLINABLE invertMod #-}
+    k# = ctz# m#
+    m' = m `unsafeShiftR` (I# (word2Int# k#))
+
+    xm' = x * m'
+
+    goDouble :: Word -> Word -> Word
+    goDouble acc r@(W# r#)
+      | isTrue# (tz# `geWord#` k#)
+      = acc
+      | otherwise
+      = goDouble (acc + m' `unsafeShiftL` tz) (r - xm' `unsafeShiftL` tz)
+      where
+        tz# = ctz# r#
+        tz = I# (word2Int# tz#)
+
+-- | Extended binary gcd.
+invertModWordOdd :: Word -> Word -> Maybe Word
+invertModWordOdd 0 !_ = Nothing
+invertModWordOdd !x !m = go00 0 m 1 x
+  where
+    halfMp1 :: Word
+    halfMp1 = half m + 1
+
+    -- Both s and s' may be even
+    go00 :: Word -> Word -> Word -> Word -> Maybe Word
+    go00 !r !s !r' !s'
+      | even s = let (# hr, hs #) = doHalf r s in go00 hr hs r' s'
+      | otherwise = go10 r s r' s'
+
+    -- Here s is odd, s' may be even
+    go10 :: Word -> Word -> Word -> Word -> Maybe Word
+    go10 !r !s !r' !s'
+      | even s' = let (# hr', hs' #) = doHalf r' s' in go10 r s hr' hs'
+      | otherwise = go11 r s r' s'
+
+    -- Here s may be even, s' is odd
+    go01 :: Word -> Word -> Word -> Word -> Maybe Word
+    go01 !r !s !r' !s'
+      | even s = let (# hr, hs #) = doHalf r s in go01 hr hs r' s'
+      | otherwise = go11 r s r' s'
+
+    -- Both s and s' are odd
+    go11 :: Word -> Word -> Word -> Word -> Maybe Word
+    go11 !r !s !r' !s' = case s `compare` s' of
+      EQ -> if s == 1 then Just r else Nothing
+      LT -> let newR' = r' - r + if r' >= r then 0 else m in
+            let newS' = s' - s in
+            let (# hr', hs' #) = doHalf newR' newS' in
+            go10 r s hr' hs'
+      GT -> let newR = r - r' + if r >= r' then 0 else m in
+            let newS = s - s' in
+            let (# hr, hs #) = doHalf newR newS in
+            go01 hr hs r' s'
+
+    doHalf :: Word -> Word -> (# Word, Word #)
+    doHalf r s = (# half r + if even r then 0 else halfMp1, half s #)
+    {-# INLINE doHalf #-}
+
+even :: Word -> Bool
+even x = (x .&. 1) == 0
+{-# INLINE even #-}
+
+half :: Word -> Word
+half x = x `shiftR` 1
+{-# INLINE half #-}
 
 -- | Drop-in replacement for 'Prelude.^' with a bit better performance.
 -- Negative powers are allowed, but may throw 'DivideByZero', if an argument
@@ -260,7 +333,7 @@ mx@(Mod (W# x#)) ^% a = case natVal mx of
     where
       f :: Integral a => Word# -> a -> Word# -> Word#
       f _  0 acc# = acc#
-      f b# e acc# = f bb# (e `Prelude.quot` 2) (if odd e then ba# else acc#)
+      f b# e acc# = f bb# (e `P.quot` 2) (if odd e then ba# else acc#)
         where
           !(# bb1#, bb2# #) = timesWord2# b# b#
           !(#    _, bb#  #) = quotRemWord2# bb1# bb2# m#
