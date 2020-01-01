@@ -8,6 +8,7 @@
 module Main where
 
 import Data.Mod
+import qualified Data.Mod.Word as Word
 import Data.Proxy
 import Data.Semigroup
 import Test.Tasty
@@ -62,6 +63,29 @@ main = defaultMain $ testGroup "All"
     , testProperty "invertMod"   invertModRandomProp
     , testProperty "powMod"      powModRandomProp
     ]
+
+  , testGroup "Word.Mod 1" $
+    testProperty "fromInteger"
+      (fromIntegerWordProp (Proxy :: Proxy 1)) :
+    map lawsToTest (laws1 (Proxy :: Proxy (Word.Mod 1)))
+  , testGroup "Word.Mod 2310" $
+    testProperty "fromInteger"
+      (fromIntegerWordProp (Proxy :: Proxy 2310)) :
+    testProperty "powMod"    (powModWordProp    @2310) :
+    testProperty "invertMod" (invertModWordProp @2310) :
+    map lawsToTest (laws (Proxy :: Proxy (Word.Mod 2310)))
+  , testGroup "Word.Mod 18446744073709551615" $
+    testProperty "fromInteger"
+      (fromIntegerWordProp (Proxy :: Proxy 18446744073709551615)) :
+    testProperty "powMod"    (powModWordProp    @18446744073709551615) :
+    testProperty "invertMod" (invertModWordProp @18446744073709551615) :
+    map lawsToTest (laws (Proxy :: Proxy (Word.Mod 18446744073709551615)))
+  , testGroup "Random Word.Mod" $
+    [ testProperty "fromInteger" fromIntegerWordRandomProp
+    , testProperty "invertMod"   invertModWordRandomProp
+    , testProperty "invertMod near maxBound" invertModWordRandomProp_nearMaxBound
+    , testProperty "powMod"      powModWordRandomProp
+    ]
   ]
 
 #ifdef MIN_VERSION_semirings
@@ -95,6 +119,10 @@ instance KnownNat m => Arbitrary (Mod m) where
   arbitrary = oneof [arbitraryBoundedEnum, fromInteger <$> arbitrary]
   shrink = map fromInteger . shrink . toInteger . unMod
 
+instance KnownNat m => Arbitrary (Word.Mod m) where
+  arbitrary = oneof [arbitraryBoundedEnum, fromInteger <$> arbitrary]
+  shrink = map fromIntegral . shrink . Word.unMod
+
 -------------------------------------------------------------------------------
 -- fromInteger
 
@@ -106,6 +134,16 @@ fromIntegerProp :: forall m. KnownNat m => Proxy m -> Integer -> Property
 fromIntegerProp p n = unMod m === fromInteger (n `mod` toInteger (natVal p))
   where
     m :: Mod m
+    m = fromInteger n
+
+fromIntegerWordRandomProp :: Word -> Integer -> Property
+fromIntegerWordRandomProp m n = m > 1 ==> case someNatVal (fromIntegral m) of
+  SomeNat p -> fromIntegerWordProp p n
+
+fromIntegerWordProp :: forall m. KnownNat m => Proxy m -> Integer -> Property
+fromIntegerWordProp p n = Word.unMod m === fromInteger (n `mod` toInteger (natVal p))
+  where
+    m :: Word.Mod m
     m = fromInteger n
 
 -------------------------------------------------------------------------------
@@ -122,6 +160,22 @@ invertModProp x = case invertMod x of
   where
     g = gcd (unMod x) (fromIntegral (natVal x))
 
+invertModWordRandomProp :: Word -> Integer -> Property
+invertModWordRandomProp m n = m > 1 ==> case someNatVal (fromIntegral m) of
+  SomeNat (Proxy :: Proxy m) -> invertModWordProp (fromInteger n :: Word.Mod m)
+
+invertModWordRandomProp_nearMaxBound :: Word -> Integer -> Property
+invertModWordRandomProp_nearMaxBound m n = m < maxBound ==>
+  case someNatVal (fromIntegral (maxBound - m)) of
+    SomeNat (Proxy :: Proxy m) -> invertModWordProp (fromInteger n :: Word.Mod m)
+
+invertModWordProp :: KnownNat m => Word.Mod m -> Property
+invertModWordProp x = case Word.invertMod x of
+  Nothing -> g =/= 1
+  Just x' -> g === 1 .&&. x * x' === 1 .&&. x' * x === 1 .&&. x' === x Word.^% (-1 :: Int)
+  where
+    g = gcd (Word.unMod x) (fromIntegral (natVal x))
+
 -------------------------------------------------------------------------------
 -- powMod
 
@@ -135,3 +189,14 @@ powModProp x n
   | otherwise = case invertMod x of
     Nothing -> property True
     Just x' -> x ^% n === getProduct (stimes (-n) (Product x'))
+
+powModWordRandomProp :: Word -> Integer -> Int -> Property
+powModWordRandomProp m n k = m > 1 ==> case someNatVal (fromIntegral m) of
+  SomeNat (Proxy :: Proxy m) -> powModWordProp (fromInteger n :: Word.Mod m) k
+
+powModWordProp :: KnownNat m => Word.Mod m -> Int -> Property
+powModWordProp x n
+  | n >= 0 = x Word.^% n === getProduct (stimes n (Product x))
+  | otherwise = case Word.invertMod x of
+    Nothing -> property True
+    Just x' -> x Word.^% n === getProduct (stimes (-n) (Product x'))

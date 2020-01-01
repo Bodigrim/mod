@@ -38,6 +38,7 @@ library
       semirings >= 0.5
   exposed-modules:
     Data.Mod
+    Data.Mod.Word
   default-language: Haskell2010
   ghc-options: -Wall
 

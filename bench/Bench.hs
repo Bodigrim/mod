@@ -7,12 +7,19 @@ import Data.Maybe
 import Data.Time.Clock
 
 import qualified Data.Mod
+import qualified Data.Mod.Word
 import qualified Data.Modular
 import qualified Numeric.Modular
 
 benchAddition :: IO ()
 benchAddition = do
   putStrLn "Addition"
+
+  t0 <- getCurrentTime
+  print (sum [1..10^7] :: Data.Mod.Word.Mod 1000000007)
+  t1 <- getCurrentTime
+  putStrLn "Data.Mod.Word"
+  print $ diffUTCTime t1 t0
 
   t0 <- getCurrentTime
   print (sum [1..10^7] :: Data.Mod.Mod 1000000007)
@@ -37,6 +44,12 @@ benchProduct = do
   putStrLn "Product"
 
   t0 <- getCurrentTime
+  print (product [1..10^7] :: Data.Mod.Word.Mod 1000000007)
+  t1 <- getCurrentTime
+  putStrLn "Data.Mod.Word"
+  print $ diffUTCTime t1 t0
+
+  t0 <- getCurrentTime
   print (product [1..10^7] :: Data.Mod.Mod 1000000007)
   t1 <- getCurrentTime
   putStrLn "Data.Mod"
@@ -59,6 +72,12 @@ benchInversion = do
   putStrLn "Inversion"
 
   t0 <- getCurrentTime
+  print (sum (map (fromJust . Data.Mod.Word.invertMod) [1 ..10^6]) :: Data.Mod.Word.Mod 1000000007)
+  t1 <- getCurrentTime
+  putStrLn "Data.Mod.Word"
+  print $ diffUTCTime t1 t0
+
+  t0 <- getCurrentTime
   print (sum (map (fromJust . Data.Mod.invertMod) [1 ..10^6]) :: Data.Mod.Mod 1000000007)
   t1 <- getCurrentTime
   putStrLn "Data.Mod"
@@ -73,6 +92,12 @@ benchInversion = do
 benchPower :: IO ()
 benchPower = do
   putStrLn "Power"
+
+  t0 <- getCurrentTime
+  print (sum (map (2 ^) [1..10^6]) :: Data.Mod.Word.Mod 1000000007)
+  t1 <- getCurrentTime
+  putStrLn "Data.Mod.Word"
+  print $ diffUTCTime t1 t0
 
   t0 <- getCurrentTime
   print (sum (map (2 ^) [1..10^6]) :: Data.Mod.Mod 1000000007)
