@@ -1,0 +1,59 @@
+name:          mod
+version:       0.1.0.0
+cabal-version: >=1.10
+build-type:    Simple
+license:       MIT
+license-file:  LICENSE
+copyright:     2019 Andrew Lelechenko
+maintainer:    Andrew Lelechenko <andrew.lelechenko@gmail.com>
+homepage:      https://github.com/Bodigrim/mod
+bug-reports:   https://github.com/Bodigrim/mod/issues
+synopsis:      Fast type-safe modular arithmetic
+description:
+  <https://en.wikipedia.org/wiki/Modular_arithmetic Modular arithmetic>,
+  promoting moduli to the type level, with an emphasis on performance.
+  Originally part of <https://hackage.haskell.org/package/arithmoi arithmoi> package.
+category:      Math, Number Theory
+author:        Andrew Lelechenko <andrew.lelechenko@gmail.com>
+tested-with:   GHC ==8.2.2 GHC ==8.4.4 GHC ==8.6.5 GHC ==8.8.1
+extra-source-files:
+  changelog.md
+  README.md
+
+source-repository head
+  type: git
+  location: https://github.com/Bodigrim/mod
+
+flag semirings
+  description: Derive semiring instances
+  default: True
+
+library
+  build-depends:
+    base >=4.10 && <5,
+    deepseq,
+    integer-gmp <1.1
+  if flag(semirings)
+    build-depends:
+      semirings >= 0.5
+  exposed-modules:
+    Data.Mod
+  default-language: Haskell2010
+  ghc-options: -Wall
+
+test-suite mod-tests
+  build-depends:
+    base >=4.10 && <5,
+    mod,
+    quickcheck-classes-base,
+    tasty >=0.10,
+    tasty-quickcheck >=0.9 && <0.11
+  if flag(semirings)
+    build-depends:
+      quickcheck-classes >=0.6.3,
+      semirings >= 0.5
+  type: exitcode-stdio-1.0
+  main-is: Test.hs
+  default-language: Haskell2010
+  hs-source-dirs: test
+  ghc-options: -Wall
