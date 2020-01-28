@@ -66,6 +66,15 @@ in terms of performance. Here is a brief comparison:
   Even less expected is that `50 :: Mod Word8 300` appears to be `6`
   (remember that type-level numbers are always `Natural`).
 
+## Citius, altius, fortius!
+
+If you are looking for an ultimate performance
+and your moduli fit into `Word`,
+try `Data.Mod.Word`,
+which is a drop-in replacement of `Data.Mod`,
+but offers 3x faster addition,
+2x faster multiplication and much less allocations.
+
 ## What's next?
 
 This package was cut out of [`arithmoi`](https://hackage.haskell.org/package/arithmoi)

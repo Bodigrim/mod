@@ -7,6 +7,10 @@
 -- <https://en.wikipedia.org/wiki/Modular_arithmetic Modular arithmetic>,
 -- promoting moduli to the type level, with an emphasis on performance.
 -- Originally part of <https://hackage.haskell.org/package/arithmoi arithmoi> package.
+--
+-- This module supports moduli of arbitrary size.
+-- Use "Data.Mod.Word" to achieve better performance,
+-- when your moduli fit into 'Word'.
 
 {-# LANGUAGE BangPatterns     #-}
 {-# LANGUAGE CPP              #-}
