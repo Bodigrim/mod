@@ -36,6 +36,7 @@ import Data.Semiring (Semiring(..), Ring(..))
 #endif
 import GHC.Exts
 import GHC.Generics
+import GHC.Integer.GMP.Internals
 import GHC.Natural (Natural(..))
 
 #if MIN_VERSION_base(4,11,0)
@@ -134,6 +135,24 @@ mulMod (NatS# m#) (W# x#) (W# y#) = W# r#
     !(# _, r# #) = quotRemWord2# z1# z2# m#
 mulMod NatJ#{} _ _ = tooLargeModulo
 
+fromIntegerMod :: Natural -> Integer -> Word
+fromIntegerMod (NatS# 0##) !_ = throw DivideByZero
+fromIntegerMod (NatS# m#) (S# x#) =
+  if isTrue# (x# >=# 0#)
+    then W# (int2Word# x# `remWord#` m#)
+    else negateMod (NatS# m#) (W# (int2Word# (negateInt# x#) `remWord#` m#))
+fromIntegerMod (NatS# m#) (Jp# x#) =
+  W# (x# `remBigNatWord` m#)
+fromIntegerMod (NatS# m#) (Jn# x#) =
+  negateMod (NatS# m#) (W# (x# `remBigNatWord` m#))
+fromIntegerMod NatJ#{} _ = tooLargeModulo
+
+fromNaturalMod :: Natural -> Natural -> Word
+fromNaturalMod (NatS# 0##) !_ = throw DivideByZero
+fromNaturalMod (NatS# m#) (NatS# x#) = W# (x# `remWord#` m#)
+fromNaturalMod (NatS# m#) (NatJ# x#) = W# (x# `remBigNatWord` m#)
+fromNaturalMod NatJ#{} _ = tooLargeModulo
+
 tooLargeModulo :: a
 tooLargeModulo = error "modulo does not fit into a machine word"
 
@@ -154,10 +173,7 @@ instance KnownNat m => Num (Mod m) where
   {-# INLINE signum #-}
   fromInteger x = mx
     where
-      m = natVal mx
-      mx = case m of
-        NatS#{} -> Mod $ fromInteger $ x `mod` toInteger m
-        NatJ#{} -> tooLargeModulo
+      mx = Mod $ fromIntegerMod (natVal mx) x
   {-# INLINE fromInteger #-}
 
 #ifdef MIN_VERSION_semirings
@@ -175,10 +191,7 @@ instance KnownNat m => Semiring (Mod m) where
   {-# INLINE one #-}
   fromNatural x = mx
     where
-      m = natVal mx
-      mx = case m of
-        NatS#{} -> Mod $ fromIntegral $ x `mod` m
-        NatJ#{} -> tooLargeModulo
+      mx = Mod $ fromNaturalMod (natVal mx) x
   {-# INLINE fromNatural #-}
 
 instance KnownNat m => Ring (Mod m) where
