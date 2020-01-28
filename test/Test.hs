@@ -11,6 +11,7 @@ import Data.Mod
 import qualified Data.Mod.Word as Word
 import Data.Proxy
 import Data.Semigroup
+import GHC.TypeNats (KnownNat, SomeNat(..), natVal, someNatVal)
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.QuickCheck.Classes.Base
@@ -18,14 +19,6 @@ import Test.QuickCheck.Classes.Base
 #ifdef MIN_VERSION_semirings
 import Data.Semiring (Ring)
 import Test.QuickCheck.Classes
-#endif
-
-#if MIN_VERSION_base(4,11,0)
-import GHC.TypeNats hiding (Mod)
-#elif MIN_VERSION_base(4,10,0)
-import GHC.TypeNats
-#else
-import GHC.TypeLits
 #endif
 
 main :: IO ()

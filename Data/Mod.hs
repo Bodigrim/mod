@@ -40,25 +40,7 @@ import GHC.Exts
 import GHC.Generics
 import GHC.Integer.GMP.Internals
 import GHC.Natural (Natural(..), powModNatural)
-
-#if MIN_VERSION_base(4,11,0)
-import GHC.TypeNats hiding (Mod)
-#elif MIN_VERSION_base(4,10,0)
-import GHC.TypeNats
-#else
-
-import GHC.TypeLits hiding (natVal, someNatVal)
-import qualified GHC.TypeLits as TL
-
-natVal :: KnownNat n => proxy n -> Natural
-natVal = fromInteger . TL.natVal
-
-someNatVal :: Natural -> SomeNat
-someNatVal n = case TL.someNatVal (toInteger n) of
-  Nothing -> error "someNatVal: impossible negative argument"
-  Just sn -> sn
-
-#endif
+import GHC.TypeNats (Nat, KnownNat, natVal)
 
 -- | This data type represents
 -- <https://en.wikipedia.org/wiki/Modular_arithmetic#Integers_modulo_n integers modulo m>,
