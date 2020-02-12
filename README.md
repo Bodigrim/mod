@@ -82,4 +82,4 @@ to provide a modular arithmetic
 with a light dependency footprint. This goal certainly limits the scope of API
 to the bare minimum. If you need more advanced tools
 (the Chinese remainder theorem, cyclic groups, modular equations, etc.)
-please refer to [Math.NumberTheory.Moduli](hackage.haskell.org/package/arithmoi/docs/Math-NumberTheory-Moduli.html).
+please refer to [Math.NumberTheory.Moduli](https://hackage.haskell.org/package/arithmoi/docs/Math-NumberTheory-Moduli.html).
