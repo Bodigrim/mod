@@ -74,8 +74,20 @@ If you are looking for an ultimate performance
 and your moduli fit into `Word`,
 try `Data.Mod.Word`,
 which is a drop-in replacement of `Data.Mod`,
-but offers 3x faster addition,
+but offers almost 3x faster addition,
 2x faster multiplication and much less allocations.
+
+## Benchmarks
+
+Here are some relative benchmarks,
+which can be reproduced by running `cabal bench`.
+
+| Discipline  | `Data.Mod.Word`  | `Data.Mod`  | `modular` | `modular-arithmetic` | `finite-typelits`
+| :---------- | :--------------: | :---------: | :-------: | :------------------: | :---------------:
+| Sum         |   0.4x           |    1x       |  4.2x     |      4.9x            |  2.9x
+| Product     |   0.5x           |    1x       |  3.2x     |      4.4x            |  2.8x
+| Inversion   |   0.8x           |    1x       |  N/A      |      6.1x            |  N/A
+| Power       |   0.9x           |    1x       |  5.4x     |      1.8x            |  N/A
 
 ## What's next?
 

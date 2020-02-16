@@ -14,106 +14,119 @@ import qualified Data.Mod.Word
 -- import qualified Data.Modular
 -- import qualified Numeric.Modular
 
+import Text.Printf
+
+normalize :: NominalDiffTime -> NominalDiffTime -> String
+normalize unit t = printf "%.2fx" (fromRational (toRational t / toRational unit) :: Double)
+
 benchAddition :: IO ()
 benchAddition = do
-  putStrLn "Addition"
+  putStrLn "Sum"
 
   t0 <- getCurrentTime
-  print (sum [1..10^7] :: Data.Mod.Word.Mod 1000000007)
+  print (sum [1..10^8] :: Data.Mod.Mod 1000000007)
   t1 <- getCurrentTime
-  putStrLn $ "Data.Mod.Word   " ++ show (diffUTCTime t1 t0)
+  let unit = diffUTCTime t1 t0
 
   t0 <- getCurrentTime
-  print (sum [1..10^7] :: Data.Mod.Mod 1000000007)
+  print (sum [1..10^8] :: Data.Mod.Word.Mod 1000000007)
   t1 <- getCurrentTime
-  putStrLn $ "Data.Mod        " ++ show (diffUTCTime t1 t0)
+  putStrLn $ "Data.Mod.Word      " ++ normalize unit (diffUTCTime t1 t0)
+
+  putStrLn $ "Data.Mod           1x"
 
   -- t0 <- getCurrentTime
-  -- print (sum [1..10^7] :: Data.Finite.Finite 1000000007)
+  -- print (sum [1..10^8] :: Data.Finite.Finite 1000000007)
   -- t1 <- getCurrentTime
-  -- putStrLn $ "Data.Finite     " ++ show (diffUTCTime t1 t0)
+  -- putStrLn $ "finite-typelits    " ++ normalize unit (diffUTCTime t1 t0)
 
   -- t0 <- getCurrentTime
-  -- print (sum [1..10^7] :: Data.Modular.Mod Integer 1000000007)
+  -- print (sum [1..10^8] :: Data.Modular.Mod Integer 1000000007)
   -- t1 <- getCurrentTime
-  -- putStrLn $ "Data.Modular    " ++ show (diffUTCTime t1 t0)
+  -- putStrLn $ "modular-arithmetic " ++ normalize unit (diffUTCTime t1 t0)
 
   -- t0 <- getCurrentTime
-  -- print (sum (map fromIntegral [1..10^7]) :: Numeric.Modular.Mod 1000000007)
+  -- print (sum (map fromIntegral [1..10^8]) :: Numeric.Modular.Mod 1000000007)
   -- t1 <- getCurrentTime
-  -- putStrLn $ "Numeric.Modular " ++ show (diffUTCTime t1 t0)
+  -- putStrLn $ "modular            " ++ normalize unit (diffUTCTime t1 t0)
 
 benchProduct :: IO ()
 benchProduct = do
   putStrLn "Product"
 
   t0 <- getCurrentTime
-  print (product [1..10^7] :: Data.Mod.Word.Mod 1000000007)
+  print (product [1..10^8] :: Data.Mod.Mod 1000000007)
   t1 <- getCurrentTime
-  putStrLn $ "Data.Mod.Word   " ++ show (diffUTCTime t1 t0)
+  let unit = diffUTCTime t1 t0
 
   t0 <- getCurrentTime
-  print (product [1..10^7] :: Data.Mod.Mod 1000000007)
+  print (product [1..10^8] :: Data.Mod.Word.Mod 1000000007)
   t1 <- getCurrentTime
-  putStrLn $ "Data.Mod        " ++ show (diffUTCTime t1 t0)
+  putStrLn $ "Data.Mod.Word      " ++ normalize unit (diffUTCTime t1 t0)
+
+  putStrLn $ "Data.Mod           1x"
 
   -- t0 <- getCurrentTime
-  -- print (product [1..10^7] :: Data.Finite.Finite 1000000007)
+  -- print (product [1..10^8] :: Data.Finite.Finite 1000000007)
   -- t1 <- getCurrentTime
-  -- putStrLn $ "Data.Finite     " ++ show (diffUTCTime t1 t0)
+  -- putStrLn $ "finite-typelits    " ++ normalize unit (diffUTCTime t1 t0)
 
   -- t0 <- getCurrentTime
-  -- print (product [1..10^7] :: Data.Modular.Mod Integer 1000000007)
+  -- print (product [1..10^8] :: Data.Modular.Mod Integer 1000000007)
   -- t1 <- getCurrentTime
-  -- putStrLn $ "Data.Modular    " ++ show (diffUTCTime t1 t0)
+  -- putStrLn $ "modular-arithmetic " ++ normalize unit (diffUTCTime t1 t0)
 
   -- t0 <- getCurrentTime
-  -- print (product (map fromIntegral [1..10^7]) :: Numeric.Modular.Mod 1000000007)
+  -- print (product (map fromIntegral [1..10^8]) :: Numeric.Modular.Mod 1000000007)
   -- t1 <- getCurrentTime
-  -- putStrLn $ "Numeric.Modular " ++ show (diffUTCTime t1 t0)
+  -- putStrLn $ "modular            " ++ normalize unit (diffUTCTime t1 t0)
 
 benchInversion :: IO ()
 benchInversion = do
   putStrLn "Inversion"
 
   t0 <- getCurrentTime
-  print (sum (map (fromJust . Data.Mod.Word.invertMod) [1 ..10^6]) :: Data.Mod.Word.Mod 1000000007)
+  print (sum (map (fromJust . Data.Mod.invertMod) [1..10^7]) :: Data.Mod.Mod 1000000007)
   t1 <- getCurrentTime
-  putStrLn $ "Data.Mod.Word   " ++ show (diffUTCTime t1 t0)
+  let unit = diffUTCTime t1 t0
 
   t0 <- getCurrentTime
-  print (sum (map (fromJust . Data.Mod.invertMod) [1 ..10^6]) :: Data.Mod.Mod 1000000007)
+  print (sum (map (fromJust . Data.Mod.Word.invertMod) [1..10^7]) :: Data.Mod.Word.Mod 1000000007)
   t1 <- getCurrentTime
-  putStrLn $ "Data.Mod        " ++ show (diffUTCTime t1 t0)
+  putStrLn $ "Data.Mod.Word      " ++ normalize unit (diffUTCTime t1 t0)
+
+  putStrLn $ "Data.Mod           1x"
 
   -- t0 <- getCurrentTime
-  -- print (sum (map Data.Modular.inv [1..10^6]) :: Data.Modular.Mod Integer 1000000007)
+  -- print (sum (map Data.Modular.inv [1..10^7]) :: Data.Modular.Mod Integer 1000000007)
   -- t1 <- getCurrentTime
-  -- putStrLn $ "Data.Modular    " ++ show (diffUTCTime t1 t0)
+  -- putStrLn $ "modular-arithmetic " ++ normalize unit (diffUTCTime t1 t0)
 
 benchPower :: IO ()
 benchPower = do
   putStrLn "Power"
 
   t0 <- getCurrentTime
-  print (sum (map (2 ^) [1..10^6]) :: Data.Mod.Word.Mod 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "Data.Mod.Word   " ++ show (diffUTCTime t1 t0)
-
-  t0 <- getCurrentTime
   print (sum (map (2 ^) [1..10^6]) :: Data.Mod.Mod 1000000007)
   t1 <- getCurrentTime
-  putStrLn $ "Data.Mod        " ++ show (diffUTCTime t1 t0)
+  let unit = diffUTCTime t1 t0
+
+  t0 <- getCurrentTime
+  print (sum (map (2 ^) [1..10^6]) :: Data.Mod.Word.Mod 1000000007)
+  t1 <- getCurrentTime
+  putStrLn $ "Data.Mod.Word      " ++ normalize unit (diffUTCTime t1 t0)
+
+  putStrLn $ "Data.Mod           1x"
 
   -- t0 <- getCurrentTime
   -- print (sum (map (2 ^) [1..10^6]) :: Data.Modular.Mod Integer 1000000007)
   -- t1 <- getCurrentTime
-  -- putStrLn $ "Data.Modular    " ++ show (diffUTCTime t1 t0)
+  -- putStrLn $ "modular-arithmetic " ++ normalize unit (diffUTCTime t1 t0)
 
   -- t0 <- getCurrentTime
   -- print (sum (map (2 ^) [1..10^6]) :: Numeric.Modular.Mod 1000000007)
   -- t1 <- getCurrentTime
-  -- putStrLn $ "Numeric.Modular " ++ show (diffUTCTime t1 t0)
+  -- putStrLn $ "modular            " ++ normalize unit (diffUTCTime t1 t0)
 
 main :: IO ()
 main = do
