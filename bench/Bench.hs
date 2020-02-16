@@ -10,6 +10,7 @@ import System.IO
 
 import qualified Data.Mod
 import qualified Data.Mod.Word
+-- import qualified Data.Finite
 -- import qualified Data.Modular
 -- import qualified Numeric.Modular
 
@@ -26,6 +27,11 @@ benchAddition = do
   print (sum [1..10^7] :: Data.Mod.Mod 1000000007)
   t1 <- getCurrentTime
   putStrLn $ "Data.Mod        " ++ show (diffUTCTime t1 t0)
+
+  -- t0 <- getCurrentTime
+  -- print (sum [1..10^7] :: Data.Finite.Finite 1000000007)
+  -- t1 <- getCurrentTime
+  -- putStrLn $ "Data.Finite     " ++ show (diffUTCTime t1 t0)
 
   -- t0 <- getCurrentTime
   -- print (sum [1..10^7] :: Data.Modular.Mod Integer 1000000007)
@@ -50,6 +56,11 @@ benchProduct = do
   print (product [1..10^7] :: Data.Mod.Mod 1000000007)
   t1 <- getCurrentTime
   putStrLn $ "Data.Mod        " ++ show (diffUTCTime t1 t0)
+
+  -- t0 <- getCurrentTime
+  -- print (product [1..10^7] :: Data.Finite.Finite 1000000007)
+  -- t1 <- getCurrentTime
+  -- putStrLn $ "Data.Finite     " ++ show (diffUTCTime t1 t0)
 
   -- t0 <- getCurrentTime
   -- print (product [1..10^7] :: Data.Modular.Mod Integer 1000000007)

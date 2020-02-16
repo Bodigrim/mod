@@ -21,19 +21,21 @@ Originally a part of [arithmoi](https://hackage.haskell.org/package/arithmoi) pa
 ## Competitors
 
 There are other Haskell packages, employing the very same idea of moduli on the type level,
-namely `modular` and `modular-arithmetic`. Unfortunately, both of them fall behind
+namely `modular` and `modular-arithmetic`. One can also use `finite-typelits`,
+which covers some elementary modular arithmetic as well.
+Unfortunately, all of them fall behind
 in terms of performance. Here is a brief comparison:
 
-| Discipline  | `mod`  | `modular` | `modular-arithmetic`
-| :---------- | :----: | :-------: | :------------------:
-| Addition    | Fast   | Slow      | Slow
-| Small `(*)` | Fast   | Slow      | Slow
-| Inversion   | Fast   | N/A       | Slow
-| Power       | Fast   | Slow      | Slow
-| Overflows   | Safe   | Safe      | Unsafe
+| Discipline  | `mod`  | `modular` | `modular-arithmetic` | `finite-typelits`
+| :---------- | :----: | :-------: | :------------------: | :---------------:
+| Addition    | Fast   | Slow      | Slow                 | Slow
+| Small `(*)` | Fast   | Slow      | Slow                 | Slow
+| Inversion   | Fast   | N/A       | Slow                 | N/A
+| Power       | Fast   | Slow      | Slow                 | N/A
+| Overflows   | Safe   | Safe      | Unsafe               | Safe
 
 * __Addition.__
-  It appears that `modular` and `modular-arithmetic` implementations of
+  All competing implementations of
   the modular addition involve divisions, while `mod` completely avoids
   this costly operation. It makes difference even for small numbers;
   e. g., `sum [1..10^7]` becomes 5x faster. For larger integers the speed up
