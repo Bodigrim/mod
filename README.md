@@ -68,6 +68,18 @@ in terms of performance. Here is a brief comparison:
   Even less expected is that `50 :: Mod Word8 300` appears to be `6`
   (remember that type-level numbers are always `Natural`).
 
+### What is the difference between `mod` and `finite-typelits`?
+
+`mod` is specifically designed to represent modular residues
+for mathematical applications (__wrapping-around__ finite numbers) and
+provides modular inversion and exponentiation.
+
+The main focus of `finite-typelits` is on __non-wrapping-around__ finite numbers,
+like indices of arrays in `vector-sized`.
+It features a `Num` instance only for the sake of overloading numeric literals.
+There is no lawful way to define `Num` except modular arithmetic,
+but from `finite-typelits` viewpoint this is a by-product.
+
 ## Citius, altius, fortius!
 
 If you are looking for an ultimate performance
@@ -79,7 +91,7 @@ but offers almost 3x faster addition,
 
 ## Benchmarks
 
-Here are some relative benchmarks,
+Here are some relative benchmarks (less is better),
 which can be reproduced by running `cabal bench`.
 
 | Discipline  | `Data.Mod.Word`  | `Data.Mod`  | `modular` | `modular-arithmetic` | `finite-typelits`
