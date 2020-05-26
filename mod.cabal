@@ -28,6 +28,10 @@ flag semirings
   description: Derive semiring instances
   default: True
 
+flag vector
+  description: Derive unboxed vector instances
+  default: True
+
 library
   build-depends:
     base >=4.10 && <5,
@@ -36,6 +40,10 @@ library
   if flag(semirings)
     build-depends:
       semirings >= 0.5
+  if flag(vector)
+    build-depends:
+      primitive,
+      vector >= 0.12
   exposed-modules:
     Data.Mod
     Data.Mod.Word
@@ -53,6 +61,10 @@ test-suite mod-tests
     build-depends:
       quickcheck-classes >=0.6.3,
       semirings >= 0.5
+  if flag(vector)
+    build-depends:
+      quickcheck-classes >=0.6.3,
+      vector >= 0.12
   type: exitcode-stdio-1.0
   main-is: Test.hs
   default-language: Haskell2010

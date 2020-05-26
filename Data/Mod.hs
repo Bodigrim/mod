@@ -12,15 +12,18 @@
 -- Use "Data.Mod.Word" to achieve better performance,
 -- when your moduli fit into 'Word'.
 
-{-# LANGUAGE BangPatterns     #-}
-{-# LANGUAGE CPP              #-}
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE DeriveGeneric    #-}
-{-# LANGUAGE KindSignatures   #-}
-{-# LANGUAGE LambdaCase       #-}
-{-# LANGUAGE MagicHash        #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE UnboxedTuples    #-}
+{-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE CPP                   #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE KindSignatures        #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MagicHash             #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE ScopedTypeVariables   #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UnboxedTuples         #-}
 
 module Data.Mod
   ( Mod
@@ -36,11 +39,19 @@ import Data.Euclidean (GcdDomain(..), Euclidean(..), Field)
 import Data.Ratio
 import Data.Semiring (Semiring(..), Ring(..))
 #endif
+#ifdef MIN_VERSION_vector
+import Control.Monad.Primitive
+import Data.Bits
+import Data.Primitive.ByteArray
+import qualified Data.Vector.Generic         as G
+import qualified Data.Vector.Generic.Mutable as M
+import qualified Data.Vector.Unboxed         as U
+#endif
 import GHC.Exts
 import GHC.Generics
 import GHC.Integer.GMP.Internals
 import GHC.Natural (Natural(..), powModNatural)
-import GHC.TypeNats (Nat, KnownNat, natVal)
+import GHC.TypeNats (Nat, KnownNat, natVal, natVal')
 
 -- | This data type represents
 -- <https://en.wikipedia.org/wiki/Modular_arithmetic#Integers_modulo_n integers modulo m>,
@@ -295,3 +306,184 @@ mx ^% a
 #-}
 
 infixr 8 ^%
+
+#ifdef MIN_VERSION_vector
+
+wordSize :: Int
+wordSize = finiteBitSize (0 :: Word)
+
+lgWordSize :: Int
+lgWordSize = case wordSize of
+  32 -> 2 -- 2^2 bytes in word
+  64 -> 3 -- 2^3 bytes in word
+  _  -> error "lgWordSize: unknown architecture"
+
+importNaturalFromByteArray :: ByteArray -> Int -> Int -> Natural
+importNaturalFromByteArray (ByteArray arr#) (I# off#) (I# len#)
+  | I# (sizeofBigNat# bn) == 1 = NatS# (bigNatToWord bn)
+  | otherwise                  = NatJ# bn
+  where
+    bn = importBigNatFromByteArray arr# (int2Word# off#) (int2Word# len#) 0#
+
+exportBigNatToMutableByteArray' :: PrimMonad m => BigNat -> MutableByteArray (PrimState m) -> Int -> m Int
+exportBigNatToMutableByteArray' bn (MutableByteArray marr#) (I# off#) =
+  fmap fromIntegral $ unsafeIOToPrim $ exportBigNatToMutableByteArray bn (unsafeCoerce# marr#) (int2Word# off#) 0#
+
+data instance U.MVector s (Mod m) = ModMVec !Int !Int !(MutableByteArray s)
+data instance U.Vector    (Mod m) = ModVec  !Int !Int !ByteArray
+
+instance KnownNat m => U.Unbox (Mod m)
+
+instance KnownNat m => M.MVector U.MVector (Mod m) where
+  {-# INLINE basicLength #-}
+  basicLength (ModMVec _ len _) = len
+
+  {-# INLINE basicUnsafeSlice #-}
+  basicUnsafeSlice offset len (ModMVec off _ marr) =
+    ModMVec (off + offset) len marr
+
+  {-# INLINE basicOverlaps #-}
+  basicOverlaps (ModMVec off1 len1 marr1) (ModMVec off2 len2 marr2) =
+    sameMutableByteArray marr1 marr2 &&
+    (between off1 off2 (off2 + len2) || between off2 off1 (off1 + len1))
+   where
+    between x y z = x >= y && x < z
+
+  {-# INLINE basicUnsafeNew #-}
+  basicUnsafeNew len
+    | len < 0 = error $ "Data.Mod.basicUnsafeNew: negative length: " ++ show len
+    | otherwise = ModMVec 0 len <$> newByteArray (len `shiftL` lgWordSize * (case natVal' (proxy# :: Proxy# m) of
+      NatS#{}  -> 1
+      NatJ# m# -> I# (sizeofBigNat# m#)))
+
+  {-# INLINE basicInitialize #-}
+  basicInitialize (ModMVec off len marr) = case natVal' (proxy# :: Proxy# m) of
+    NatS#{}  -> setByteArray marr off len (0 :: Word)
+    NatJ# m# -> setByteArray marr (off * sz) (len * sz) (0 :: Word)
+      where
+        sz = I# (sizeofBigNat# m#)
+
+  {-# INLINE basicUnsafeReplicate #-}
+  basicUnsafeReplicate len x
+    | len < 0 =  error $ "Data.Mod.basicUnsafeReplicate: negative length: " ++ show len
+    | otherwise = case natVal' (proxy# :: Proxy# m) of
+      NatS#{} -> case unMod x of
+        NatS# x# -> do
+          marr <- newByteArray (len `shiftL` lgWordSize)
+          setByteArray marr 0 len (W# x#)
+          pure $ ModMVec 0 len marr
+        _        -> brokenInvariant
+      NatJ# m# -> do
+        marr <- newByteArray (len `shiftL` lgWordSize * I# (sizeofBigNat# m#))
+        let vec = ModMVec 0 len marr
+        M.basicSet vec x
+        pure vec
+
+  {-# INLINE basicUnsafeRead #-}
+  basicUnsafeRead (ModMVec off _ marr) !i' = case natVal' (proxy# :: Proxy# m) of
+    NatS#{} -> do
+      !(W# w#) <- readByteArray marr (off + i')
+      pure . Mod $! NatS# w#
+    NatJ# m# -> do
+      arr <- unsafeFreezeByteArray marr
+      pure . Mod $! importNaturalFromByteArray arr i sz
+      where
+        sz = I# (sizeofBigNat# m#) `shiftL` lgWordSize
+        i  = (off + i') * sz
+
+  {-# INLINE basicUnsafeWrite #-}
+  basicUnsafeWrite (ModMVec off _ marr) !i' !(Mod x) = case natVal' (proxy# :: Proxy# m) of
+    NatS#{} -> case x of
+      NatS# x# -> writeByteArray marr (off + i') (W# x#)
+      _        -> brokenInvariant
+    NatJ# m# -> case x of
+      NatS# x# -> do
+        writeByteArray marr i (W# x#)
+        setByteArray marr (i + 1) (sz - 1) (0 :: Word)
+      NatJ# bn -> do
+        l <- exportBigNatToMutableByteArray' bn marr (i `shiftL` lgWordSize)
+        fillByteArray marr (i `shiftL` lgWordSize + l) (sz `shiftL` lgWordSize - l) 0
+      where
+        sz = I# (sizeofBigNat# m#)
+        i = (off + i') * sz
+
+  {-# INLINE basicClear #-}
+  basicClear _ = pure ()
+
+  {-# INLINE basicSet #-}
+  basicSet (ModMVec _ 0 _) _ = pure ()
+  basicSet (ModMVec off len marr) (Mod x) = case natVal' (proxy# :: Proxy# m) of
+    NatS#{} -> case x of
+      NatS# x# -> setByteArray marr off len (W# x#)
+      _        -> brokenInvariant
+    NatJ# m# -> do
+      case x of
+        NatS# x# -> do
+          writeByteArray marr (off * sz) (W# x#)
+          setByteArray marr (off * sz + 1) (sz - 1) (0 :: Word)
+        NatJ# bn -> do
+          l <- exportBigNatToMutableByteArray' bn marr off'
+          fillByteArray marr (off' + l) (sz `shiftL` lgWordSize - l) 0
+      doSet (sz `shiftL` lgWordSize)
+      where
+        sz = I# (sizeofBigNat# m#)
+        off' = (off * sz) `shiftL` lgWordSize
+        len' = (len * sz) `shiftL` lgWordSize
+        doSet i
+          | 2 * i < len' = copyMutableByteArray marr (off' + i) marr off' i >> doSet (2 * i)
+          | otherwise    = copyMutableByteArray marr (off' + i) marr off' (len' - i)
+
+  {-# INLINE basicUnsafeCopy #-}
+  basicUnsafeCopy _ (ModMVec _ 0 _) = pure ()
+  basicUnsafeCopy (ModMVec offDst len dst) (ModMVec offSrc _ src) =
+    copyMutableByteArray dst (offDst * sz) src (offSrc * sz) (len * sz)
+    where
+      sz = (case natVal' (proxy# :: Proxy# m) of
+        NatS#{}  -> 1
+        NatJ# m# -> I# (sizeofBigNat# m#)) `shiftL` lgWordSize
+
+  {-# INLINE basicUnsafeGrow #-}
+  basicUnsafeGrow v@(ModMVec off len src) by = case by `compare` 0 of
+    LT -> error $ "Data.Mod.basicUnsafeGrow: negative increment: " ++ show by
+    EQ -> pure v
+    GT -> do
+      dst <- newByteArray ((len + by) * sz)
+      copyMutableByteArray dst 0 src (off * sz) (len * sz)
+      pure $ ModMVec 0 (len + by) dst
+      where
+        sz = (case natVal' (proxy# :: Proxy# m) of
+          NatS#{}  -> 1
+          NatJ# m# -> I# (sizeofBigNat# m#)) `shiftL` lgWordSize
+
+instance KnownNat m => G.Vector U.Vector (Mod m) where
+  {-# INLINE basicLength #-}
+  basicLength (ModVec _ len _) = len
+
+  {-# INLINE basicUnsafeFreeze #-}
+  basicUnsafeFreeze (ModMVec off len marr) =
+    ModVec off len <$> unsafeFreezeByteArray marr
+
+  {-# INLINE basicUnsafeThaw #-}
+  basicUnsafeThaw (ModVec off len arr) =
+    ModMVec off len <$> unsafeThawByteArray arr
+
+  {-# INLINE basicUnsafeSlice #-}
+  basicUnsafeSlice offset len (ModVec off _ arr) =
+    ModVec (off + offset) len arr
+
+  {-# INLINE basicUnsafeIndexM #-}
+  basicUnsafeIndexM (ModVec off _ arr) !i' = case natVal' (proxy# :: Proxy# m) of
+    NatS#{} -> pure . Mod $! NatS# w#
+      where
+        !(W# w#) = indexByteArray arr (off + i')
+    NatJ# m# -> pure . Mod $! importNaturalFromByteArray arr i sz
+      where
+        sz = I# (sizeofBigNat# m#) `shiftL` lgWordSize
+        i  = (off + i') * sz
+
+  {-# INLINE basicUnsafeCopy #-}
+  basicUnsafeCopy dst src = do
+    src1 <- G.basicUnsafeThaw src
+    M.basicUnsafeCopy dst src1
+
+#endif

@@ -11,15 +11,17 @@
 -- This module supports only moduli, which fit into 'Word'.
 -- Use (slower) "Data.Mod" to handle arbitrary-sized moduli.
 
-{-# LANGUAGE BangPatterns     #-}
-{-# LANGUAGE CPP              #-}
-{-# LANGUAGE DataKinds        #-}
-{-# LANGUAGE DeriveGeneric    #-}
-{-# LANGUAGE KindSignatures   #-}
-{-# LANGUAGE LambdaCase       #-}
-{-# LANGUAGE MagicHash        #-}
-{-# LANGUAGE TypeApplications #-}
-{-# LANGUAGE UnboxedTuples    #-}
+{-# LANGUAGE BangPatterns          #-}
+{-# LANGUAGE CPP                   #-}
+{-# LANGUAGE DataKinds             #-}
+{-# LANGUAGE DeriveGeneric         #-}
+{-# LANGUAGE KindSignatures        #-}
+{-# LANGUAGE LambdaCase            #-}
+{-# LANGUAGE MagicHash             #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications      #-}
+{-# LANGUAGE TypeFamilies          #-}
+{-# LANGUAGE UnboxedTuples         #-}
 
 module Data.Mod.Word
   ( Mod
@@ -36,6 +38,12 @@ import Data.Bits
 import Data.Euclidean (GcdDomain(..), Euclidean(..), Field)
 import Data.Ratio
 import Data.Semiring (Semiring(..), Ring(..))
+#endif
+#ifdef MIN_VERSION_vector
+import qualified Data.Vector.Generic         as G
+import qualified Data.Vector.Generic.Mutable as M
+import qualified Data.Vector.Primitive       as P
+import qualified Data.Vector.Unboxed         as U
 #endif
 import GHC.Exts
 import GHC.Generics
@@ -357,3 +365,54 @@ mx@(Mod (W# x#)) ^% a = case natVal mx of
 #-}
 
 infixr 8 ^%
+
+#ifdef MIN_VERSION_vector
+
+newtype instance U.MVector s (Mod m) = MV_Mod (P.MVector s Word)
+newtype instance U.Vector    (Mod m) = V_Mod  (P.Vector    Word)
+
+instance U.Unbox (Mod m)
+
+instance M.MVector U.MVector (Mod m) where
+  {-# INLINE basicLength #-}
+  {-# INLINE basicUnsafeSlice #-}
+  {-# INLINE basicOverlaps #-}
+  {-# INLINE basicUnsafeNew #-}
+  {-# INLINE basicInitialize #-}
+  {-# INLINE basicUnsafeReplicate #-}
+  {-# INLINE basicUnsafeRead #-}
+  {-# INLINE basicUnsafeWrite #-}
+  {-# INLINE basicClear #-}
+  {-# INLINE basicSet #-}
+  {-# INLINE basicUnsafeCopy #-}
+  {-# INLINE basicUnsafeGrow #-}
+  basicLength (MV_Mod v) = M.basicLength v
+  basicUnsafeSlice i n (MV_Mod v) = MV_Mod $ M.basicUnsafeSlice i n v
+  basicOverlaps (MV_Mod v1) (MV_Mod v2) = M.basicOverlaps v1 v2
+  basicUnsafeNew n = MV_Mod <$> M.basicUnsafeNew n
+  basicInitialize (MV_Mod v) = M.basicInitialize v
+  basicUnsafeReplicate n x = MV_Mod <$> M.basicUnsafeReplicate n (unMod x)
+  basicUnsafeRead (MV_Mod v) i = Mod <$> M.basicUnsafeRead v i
+  basicUnsafeWrite (MV_Mod v) i x = M.basicUnsafeWrite v i (unMod x)
+  basicClear (MV_Mod v) = M.basicClear v
+  basicSet (MV_Mod v) x = M.basicSet v (unMod x)
+  basicUnsafeCopy (MV_Mod v1) (MV_Mod v2) = M.basicUnsafeCopy v1 v2
+  basicUnsafeMove (MV_Mod v1) (MV_Mod v2) = M.basicUnsafeMove v1 v2
+  basicUnsafeGrow (MV_Mod v) n = MV_Mod <$> M.basicUnsafeGrow v n
+
+instance G.Vector U.Vector (Mod m) where
+  {-# INLINE basicUnsafeFreeze #-}
+  {-# INLINE basicUnsafeThaw #-}
+  {-# INLINE basicLength #-}
+  {-# INLINE basicUnsafeSlice #-}
+  {-# INLINE basicUnsafeIndexM #-}
+  {-# INLINE elemseq #-}
+  basicUnsafeFreeze (MV_Mod v) = V_Mod <$> G.basicUnsafeFreeze v
+  basicUnsafeThaw (V_Mod v) = MV_Mod <$> G.basicUnsafeThaw v
+  basicLength (V_Mod v) = G.basicLength v
+  basicUnsafeSlice i n (V_Mod v) = V_Mod $ G.basicUnsafeSlice i n v
+  basicUnsafeIndexM (V_Mod v) i = Mod <$> G.basicUnsafeIndexM v i
+  basicUnsafeCopy (MV_Mod mv) (V_Mod v) = G.basicUnsafeCopy mv v
+  elemseq _ = seq
+
+#endif
