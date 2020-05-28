@@ -7,6 +7,7 @@
 
 module Main where
 
+import Data.Bits
 import Data.Mod
 import qualified Data.Mod.Word as Word
 import Data.Proxy
@@ -71,12 +72,20 @@ main = defaultMain $ testGroup "All"
     testProperty "powMod"    (powModWordProp    @2310) :
     testProperty "invertMod" (invertModWordProp @2310) :
     map lawsToTest (laws (Proxy :: Proxy (Word.Mod 2310)))
-  , testGroup "Word.Mod 18446744073709551615" $
-    testProperty "fromInteger"
-      (fromIntegerWordProp (Proxy :: Proxy 18446744073709551615)) :
-    testProperty "powMod"    (powModWordProp    @18446744073709551615) :
-    testProperty "invertMod" (invertModWordProp @18446744073709551615) :
-    map lawsToTest (laws (Proxy :: Proxy (Word.Mod 18446744073709551615)))
+  , if finiteBitSize (0 :: Word) == 64 then
+      testGroup "Word.Mod 18446744073709551615" $
+      testProperty "fromInteger"
+        (fromIntegerWordProp (Proxy :: Proxy 18446744073709551615)) :
+      testProperty "powMod"    (powModWordProp    @18446744073709551615) :
+      testProperty "invertMod" (invertModWordProp @18446744073709551615) :
+      map lawsToTest (laws (Proxy :: Proxy (Word.Mod 18446744073709551615)))
+    else
+      testGroup "Word.Mod 4294967295" $
+      testProperty "fromInteger"
+        (fromIntegerWordProp (Proxy :: Proxy 4294967295)) :
+      testProperty "powMod"    (powModWordProp    @4294967295) :
+      testProperty "invertMod" (invertModWordProp @4294967295) :
+      map lawsToTest (laws (Proxy :: Proxy (Word.Mod 4294967295)))
   , testGroup "Random Word.Mod" $
     [ testProperty "fromInteger" fromIntegerWordRandomProp
     , testProperty "invertMod"   invertModWordRandomProp
@@ -132,11 +141,11 @@ lawsToTest (Laws name props) =
   testGroup name $ map (uncurry testProperty) props
 
 instance KnownNat m => Arbitrary (Mod m) where
-  arbitrary = oneof [arbitraryBoundedEnum, fromInteger <$> arbitrary]
+  arbitrary = oneof [arbitraryBoundedEnum, negate <$> arbitraryBoundedEnum, fromInteger <$> arbitrary]
   shrink = map fromInteger . shrink . toInteger . unMod
 
 instance KnownNat m => Arbitrary (Word.Mod m) where
-  arbitrary = oneof [arbitraryBoundedEnum, fromInteger <$> arbitrary]
+  arbitrary = oneof [arbitraryBoundedEnum, negate <$> arbitraryBoundedEnum, fromInteger <$> arbitrary]
   shrink = map fromIntegral . shrink . Word.unMod
 
 -------------------------------------------------------------------------------
