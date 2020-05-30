@@ -1,6 +1,6 @@
 -- |
 -- Module:      Data.Mod.Word
--- Copyright:   (c) 2017-2019 Andrew Lelechenko
+-- Copyright:   (c) 2017-2020 Andrew Lelechenko
 -- Licence:     MIT
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
 --
@@ -70,6 +70,10 @@ newtype Mod (m :: Nat) = Mod
   { unMod :: Word
   -- ^ The canonical representative of the residue class,
   -- always between 0 and m - 1 inclusively.
+  --
+  -- >>> :set -XDataKinds
+  -- >>> -1 :: Mod 10
+  -- (9 `modulo` 10)
   }
   deriving (Eq, Ord, Generic)
 

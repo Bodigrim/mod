@@ -4,7 +4,7 @@ cabal-version: >=1.10
 build-type:    Simple
 license:       MIT
 license-file:  LICENSE
-copyright:     2019 Andrew Lelechenko
+copyright:     2017-2020 Andrew Lelechenko
 maintainer:    Andrew Lelechenko <andrew.lelechenko@gmail.com>
 homepage:      https://github.com/Bodigrim/mod
 bug-reports:   https://github.com/Bodigrim/mod/issues

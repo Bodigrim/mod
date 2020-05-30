@@ -1,6 +1,6 @@
 -- |
 -- Module:      Data.Mod
--- Copyright:   (c) 2017-2019 Andrew Lelechenko
+-- Copyright:   (c) 2017-2020 Andrew Lelechenko
 -- Licence:     MIT
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
 --
@@ -72,6 +72,10 @@ newtype Mod (m :: Nat) = Mod
   { unMod :: Natural
   -- ^ The canonical representative of the residue class,
   -- always between 0 and m - 1 inclusively.
+  --
+  -- >>> :set -XDataKinds
+  -- >>> -1 :: Mod 10
+  -- (9 `modulo` 10)
   }
   deriving (Eq, Ord, Generic)
 
@@ -329,7 +333,14 @@ exportBigNatToMutableByteArray' :: PrimMonad m => BigNat -> MutableByteArray (Pr
 exportBigNatToMutableByteArray' bn (MutableByteArray marr#) (I# off#) =
   fmap fromIntegral $ unsafeIOToPrim $ exportBigNatToMutableByteArray bn (unsafeCoerce# marr#) (int2Word# off#) 0#
 
+-- | Unboxed vectors of 'Mod' cause more nursery allocations
+-- than boxed ones, but reduce pressure on garbage collector,
+-- especially for large vectors.
 data instance U.MVector s (Mod m) = ModMVec !Int !Int !(MutableByteArray s)
+
+-- | Unboxed vectors of 'Mod' cause more nursery allocations
+-- than boxed ones, but reduce pressure on garbage collector,
+-- especially for large vectors.
 data instance U.Vector    (Mod m) = ModVec  !Int !Int !ByteArray
 
 instance KnownNat m => U.Unbox (Mod m)
