@@ -11,6 +11,9 @@ import System.IO
 
 import qualified Data.Mod
 import qualified Data.Mod.Word
+#ifdef MIN_VERSION_finite_field
+import qualified Data.FiniteField.PrimeField
+#endif
 #ifdef MIN_VERSION_finite_typelits
 import qualified Data.Finite
 #endif
@@ -41,6 +44,13 @@ benchAddition = do
   putStrLn $ "Data.Mod.Word      " ++ normalize unit (diffUTCTime t1 t0)
 
   putStrLn $ "Data.Mod           1x"
+
+#ifdef MIN_VERSION_finite_field
+  t0 <- getCurrentTime
+  print (sum [1..10^8] :: Data.FiniteField.PrimeField.PrimeField 1000000007)
+  t1 <- getCurrentTime
+  putStrLn $ "finite-field       " ++ normalize unit (diffUTCTime t1 t0)
+#endif
 
 #ifdef MIN_VERSION_finite_typelits
   t0 <- getCurrentTime
@@ -79,6 +89,13 @@ benchProduct = do
 
   putStrLn $ "Data.Mod           1x"
 
+#ifdef MIN_VERSION_finite_field
+  t0 <- getCurrentTime
+  print (product [1..10^8] :: Data.FiniteField.PrimeField.PrimeField 1000000007)
+  t1 <- getCurrentTime
+  putStrLn $ "finite-field       " ++ normalize unit (diffUTCTime t1 t0)
+#endif
+
 #ifdef MIN_VERSION_finite_typelits
   t0 <- getCurrentTime
   print (product [1..10^8] :: Data.Finite.Finite 1000000007)
@@ -116,6 +133,13 @@ benchInversion = do
 
   putStrLn $ "Data.Mod           1x"
 
+#ifdef MIN_VERSION_finite_field
+  t0 <- getCurrentTime
+  print (sum (map recip [1..10^7]) :: Data.FiniteField.PrimeField.PrimeField 1000000007)
+  t1 <- getCurrentTime
+  putStrLn $ "finite-field       " ++ normalize unit (diffUTCTime t1 t0)
+#endif
+
 #ifdef MIN_VERSION_modular_arithmetic
   t0 <- getCurrentTime
   print (sum (map Data.Modular.inv [1..10^7]) :: Data.Modular.Mod Integer 1000000007)
@@ -138,6 +162,13 @@ benchPower = do
   putStrLn $ "Data.Mod.Word      " ++ normalize unit (diffUTCTime t1 t0)
 
   putStrLn $ "Data.Mod           1x"
+
+#ifdef MIN_VERSION_finite_field
+  t0 <- getCurrentTime
+  print (sum (map (2 ^) [1..10^6]) :: Data.FiniteField.PrimeField.PrimeField 1000000007)
+  t1 <- getCurrentTime
+  putStrLn $ "finite-field       " ++ normalize unit (diffUTCTime t1 t0)
+#endif
 
 #ifdef MIN_VERSION_modular_arithmetic
   t0 <- getCurrentTime

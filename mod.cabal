@@ -75,6 +75,7 @@ benchmark mod-bench
   build-depends:
     base,
     mod,
+    -- finite-field,
     -- finite-typelits,
     -- modular,
     -- modular-arithmetic,
