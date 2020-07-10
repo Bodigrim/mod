@@ -170,6 +170,13 @@ benchPower = do
   putStrLn $ "finite-field       " ++ normalize unit (diffUTCTime t1 t0)
 #endif
 
+#ifdef MIN_VERSION_finite_typelits
+  t0 <- getCurrentTime
+  print (sum (map (2 ^) [1..10^6]) :: Data.Finite.Finite 1000000007)
+  t1 <- getCurrentTime
+  putStrLn $ "finite-typelits    " ++ normalize unit (diffUTCTime t1 t0)
+#endif
+
 #ifdef MIN_VERSION_modular_arithmetic
   t0 <- getCurrentTime
   print (sum (map (2 ^) [1..10^6]) :: Data.Modular.Mod Integer 1000000007)

@@ -21,18 +21,18 @@ Originally a part of [arithmoi](https://hackage.haskell.org/package/arithmoi) pa
 ## Competitors
 
 There are other Haskell packages, employing the very same idea of moduli on the type level,
-namely `modular` and `modular-arithmetic`. One can also use `finite-typelits`,
+namely `modular`, `modular-arithmetic` and `finite-field`. One can also use `finite-typelits`,
 which covers some elementary modular arithmetic as well.
 Unfortunately, all of them fall behind
 in terms of performance. Here is a brief comparison:
 
-| Discipline  | `mod`  | `modular` | `modular-arithmetic` | `finite-typelits`
-| :---------- | :----: | :-------: | :------------------: | :---------------:
-| Addition    | Fast   | Slow      | Slow                 | Slow
-| Small `(*)` | Fast   | Slow      | Slow                 | Slow
-| Inversion   | Fast   | N/A       | Slow                 | N/A
-| Power       | Fast   | Slow      | Slow                 | N/A
-| Overflows   | Safe   | Safe      | Unsafe               | Safe
+| Discipline  | `mod`  | `modular` | `modular-arithmetic` | `finite-typelits` | `finite-field`
+| :---------- | :----: | :-------: | :------------------: | :---------------: | :------------:
+| Addition    | Fast   | Slow      | Slow                 | Slow              | Slow
+| Small `(*)` | Fast   | Slow      | Slow                 | Slow              | Slow
+| Inversion   | Fast   | N/A       | Slow                 | N/A               | Slow
+| Power       | Fast   | Slow      | Slow                 | Slow              | Slow
+| Overflows   | Safe   | Safe      | Unsafe               | Safe              | Safe
 
 * __Addition.__
   All competing implementations of
@@ -86,20 +86,19 @@ If you are looking for an ultimate performance
 and your moduli fit into `Word`,
 try `Data.Mod.Word`,
 which is a drop-in replacement of `Data.Mod`,
-but offers almost 3x faster addition,
-2x faster multiplication and much less allocations.
+but offers almost twice faster addition and multiplication, and much less allocations.
 
 ## Benchmarks
 
 Here are some relative benchmarks (less is better),
 which can be reproduced by running `cabal bench`.
 
-| Discipline  | `Data.Mod.Word`  | `Data.Mod`  | `modular` | `modular-arithmetic` | `finite-typelits`
-| :---------- | :--------------: | :---------: | :-------: | :------------------: | :---------------:
-| Sum         |   0.4x           |    1x       |  4.2x     |      4.9x            |  2.9x
-| Product     |   0.5x           |    1x       |  3.2x     |      4.4x            |  2.8x
-| Inversion   |   0.8x           |    1x       |  N/A      |      6.1x            |  N/A
-| Power       |   0.9x           |    1x       |  5.4x     |      1.8x            |  N/A
+| Discipline  | `Data.Mod.Word`  | `Data.Mod`  | `modular` | `modular-arithmetic` | `finite-typelits` | `finite-field`
+| :---------- | :--------------: | :---------: | :-------: | :------------------: | :---------------: | :------------:
+| Sum         |   0.4x           |    1x       |  4.5x     |      6.1x            |  3.3x             | 5.0x
+| Product     |   0.6x           |    1x       |  3.6x     |      5.4x            |  3.1x             | 4.5x
+| Inversion   |   0.8x           |    1x       |  N/A      |      6.1x            |  N/A              | 4.1x
+| Power       |   0.9x           |    1x       |  6.0x     |      1.8x            |  1.9x             | 2.1x
 
 ## What's next?
 
