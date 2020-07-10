@@ -11,17 +11,18 @@
 -- This module supports only moduli, which fit into 'Word'.
 -- Use (slower) "Data.Mod" to handle arbitrary-sized moduli.
 
-{-# LANGUAGE BangPatterns          #-}
-{-# LANGUAGE CPP                   #-}
-{-# LANGUAGE DataKinds             #-}
-{-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE KindSignatures        #-}
-{-# LANGUAGE LambdaCase            #-}
-{-# LANGUAGE MagicHash             #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
-{-# LANGUAGE TypeApplications      #-}
-{-# LANGUAGE TypeFamilies          #-}
-{-# LANGUAGE UnboxedTuples         #-}
+{-# LANGUAGE BangPatterns               #-}
+{-# LANGUAGE CPP                        #-}
+{-# LANGUAGE DataKinds                  #-}
+{-# LANGUAGE DeriveGeneric              #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving #-}
+{-# LANGUAGE KindSignatures             #-}
+{-# LANGUAGE LambdaCase                 #-}
+{-# LANGUAGE MagicHash                  #-}
+{-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE TypeApplications           #-}
+{-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE UnboxedTuples              #-}
 
 module Data.Mod.Word
   ( Mod
@@ -45,6 +46,7 @@ import qualified Data.Vector.Generic.Mutable as M
 import qualified Data.Vector.Primitive       as P
 import qualified Data.Vector.Unboxed         as U
 #endif
+import Foreign.Storable (Storable)
 import GHC.Exts
 import GHC.Generics
 import GHC.Integer.GMP.Internals
@@ -75,7 +77,7 @@ newtype Mod (m :: Nat) = Mod
   -- >>> -1 :: Mod 10
   -- (9 `modulo` 10)
   }
-  deriving (Eq, Ord, Generic)
+  deriving (Eq, Ord, Generic, Storable)
 
 instance NFData (Mod m)
 
@@ -144,11 +146,15 @@ fromIntegerMod (NatS# m#) (Jn# x#) =
   negateMod (NatS# m#) (W# (x# `remBigNatWord` m#))
 fromIntegerMod NatJ#{} _ = tooLargeModulo
 
+#ifdef MIN_VERSION_semirings
+
 fromNaturalMod :: Natural -> Natural -> Word
 fromNaturalMod (NatS# 0##) !_ = throw DivideByZero
 fromNaturalMod (NatS# m#) (NatS# x#) = W# (x# `remWord#` m#)
 fromNaturalMod (NatS# m#) (NatJ# x#) = W# (x# `remBigNatWord` m#)
 fromNaturalMod NatJ#{} _ = tooLargeModulo
+
+#endif
 
 tooLargeModulo :: a
 tooLargeModulo = error "modulo does not fit into a machine word"

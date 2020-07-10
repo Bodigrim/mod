@@ -34,6 +34,9 @@ module Data.Mod
 
 import Control.Exception
 import Control.DeepSeq
+import Control.Monad
+import Data.Bits
+import Data.Word (Word8)
 #ifdef MIN_VERSION_semirings
 import Data.Euclidean (GcdDomain(..), Euclidean(..), Field)
 import Data.Ratio
@@ -41,12 +44,12 @@ import Data.Semiring (Semiring(..), Ring(..))
 #endif
 #ifdef MIN_VERSION_vector
 import Control.Monad.Primitive
-import Data.Bits
 import Data.Primitive.ByteArray
 import qualified Data.Vector.Generic         as G
 import qualified Data.Vector.Generic.Mutable as M
 import qualified Data.Vector.Unboxed         as U
 #endif
+import Foreign.Storable (Storable(..))
 import GHC.Exts
 import GHC.Generics
 import GHC.Integer.GMP.Internals
@@ -311,8 +314,6 @@ mx ^% a
 
 infixr 8 ^%
 
-#ifdef MIN_VERSION_vector
-
 wordSize :: Int
 wordSize = finiteBitSize (0 :: Word)
 
@@ -321,6 +322,37 @@ lgWordSize = case wordSize of
   32 -> 2 -- 2^2 bytes in word
   64 -> 3 -- 2^3 bytes in word
   _  -> error "lgWordSize: unknown architecture"
+
+instance KnownNat m => Storable (Mod m) where
+  sizeOf _ = case natVal' (proxy# :: Proxy# m) of
+    NatS#{}  -> sizeOf (0 :: Word)
+    NatJ# m# -> I# (sizeofBigNat# m#) `shiftL` lgWordSize
+  alignment _ = alignment (0 :: Word)
+  peek (Ptr addr#) = case natVal' (proxy# :: Proxy# m) of
+    NatS#{} -> do
+      W# w# <- peek (Ptr addr#)
+      pure . Mod $! NatS# w#
+    NatJ# m# -> do
+      let !(I# sz#) = I# (sizeofBigNat# m#) `shiftL` lgWordSize
+      bn <- importBigNatFromAddr addr# (int2Word# sz#) 0#
+      pure . Mod $! if I# (sizeofBigNat# bn) == 1 then NatS# (bigNatToWord bn) else NatJ# bn
+  poke (Ptr addr#) (Mod x) = case natVal' (proxy# :: Proxy# m) of
+    NatS#{} -> case x of
+      NatS# x# -> poke (Ptr addr#) (W# x#)
+      _        -> brokenInvariant
+    NatJ# m# -> case x of
+      NatS# x# -> do
+        poke (Ptr addr#) (W# x#)
+        forM_ [1 .. sz - 1] $ \off ->
+          pokeElemOff (Ptr addr#) off (0 :: Word)
+      NatJ# bn -> do
+        l <- exportBigNatToAddr bn addr# 0#
+        forM_ [fromIntegral l .. (sz `shiftL` lgWordSize) - 1] $ \off ->
+          pokeElemOff (Ptr addr#) off (0 :: Word8)
+      where
+        sz = I# (sizeofBigNat# m#)
+
+#ifdef MIN_VERSION_vector
 
 importNaturalFromByteArray :: ByteArray -> Int -> Int -> Natural
 importNaturalFromByteArray (ByteArray arr#) (I# off#) (I# len#)
