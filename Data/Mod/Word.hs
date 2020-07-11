@@ -57,11 +57,11 @@ import GHC.TypeNats (Nat, KnownNat, natVal)
 -- equipped with useful instances.
 --
 -- For example, 3 :: 'Mod' 10 stands for the class of integers
--- congruent to 3 modulo 10: …−17, −7, 3, 13, 23…
+-- congruent to \( 3 \bmod 10 \colon \ldots {−17}, −7, 3, 13, 23 \ldots \)
 --
 -- >>> :set -XDataKinds
--- >>> 3 + 8 :: Mod 10
--- (1 `modulo` 10) -- because 3 + 8 = 11 ≡ 1 (mod 10)
+-- >>> 3 + 8 :: Mod 10 -- 3 + 8 = 11 ≡ 1 (mod 10)
+-- (1 `modulo` 10)
 --
 -- __Warning:__ division by residue, which is not
 -- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
@@ -70,7 +70,7 @@ import GHC.TypeNats (Nat, KnownNat, natVal)
 newtype Mod (m :: Nat) = Mod
   { unMod :: Word
   -- ^ The canonical representative of the residue class,
-  -- always between 0 and m - 1 inclusively.
+  -- always between 0 and \( m - 1 \) inclusively.
   --
   -- >>> :set -XDataKinds
   -- >>> -1 :: Mod 10
@@ -242,10 +242,10 @@ instance KnownNat m => Field (Mod m)
 -- Otherwise return 'Nothing'.
 --
 -- >>> :set -XDataKinds
--- >>> invertMod 3 :: Mod 10
--- Just (7 `modulo` 10) -- because 3 * 7 = 21 ≡ 1 (mod 10)
--- >>> invertMod 4 :: Mod 10
--- Nothing -- because 4 and 10 are not coprime
+-- >>> invertMod 3 :: Mod 10 -- 3 * 7 = 21 ≡ 1 (mod 10)
+-- Just (7 `modulo` 10)
+-- >>> invertMod 4 :: Mod 10 -- 4 and 10 are not coprime
+-- Nothing
 invertMod :: KnownNat m => Mod m -> Maybe (Mod m)
 invertMod mx@(Mod x) = case natVal mx of
   NatJ#{}   -> tooLargeModulo
@@ -335,12 +335,12 @@ half x = x `shiftR` 1
 -- Building with @-O@ triggers a rewrite rule 'Prelude.^' = '^%'.
 --
 -- >>> :set -XDataKinds
--- >>> 3 ^% 4 :: Mod 10
--- (1 `modulo` 10) -- because 3 ^ 4 = 81 ≡ 1 (mod 10)
--- >>> 3 ^% (-1) :: Mod 10
--- (7 `modulo` 10) -- because 3 * 7 = 21 ≡ 1 (mod 10)
--- >>> 4 ^% (-1) :: Mod 10
--- (*** Exception: divide by zero -- because 4 and 10 are not coprime
+-- >>> 3 ^% 4 :: Mod 10    -- 3 ^ 4 = 81 ≡ 1 (mod 10)
+-- (1 `modulo` 10)
+-- >>> 3 ^% (-1) :: Mod 10 -- 3 * 7 = 21 ≡ 1 (mod 10)
+-- (7 `modulo` 10)
+-- >>> 4 ^% (-1) :: Mod 10 -- 4 and 10 are not coprime
+-- (*** Exception: divide by zero
 (^%) :: (KnownNat m, Integral a) => Mod m -> a -> Mod m
 mx@(Mod (W# x#)) ^% a = case natVal mx of
   NatJ#{} -> tooLargeModulo
