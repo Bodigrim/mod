@@ -45,18 +45,18 @@ import Data.Semiring (Semiring(..), Ring(..))
 #ifdef MIN_VERSION_vector
 import Control.Monad.Primitive
 import Control.Monad.ST
-import qualified Data.Primitive.Types as P
-import Data.Primitive.ByteArray
+import qualified Data.Primitive.Types        as P
 import qualified Data.Vector.Generic         as G
 import qualified Data.Vector.Generic.Mutable as M
 import qualified Data.Vector.Unboxed         as U
 import qualified Data.Vector.Primitive       as P
+import Foreign (copyBytes)
+import GHC.IO.Unsafe (unsafeDupablePerformIO)
 #endif
 import Foreign.Storable (Storable(..))
 import GHC.Exts
 import GHC.Generics
 import GHC.Integer.GMP.Internals
-import GHC.IO.Unsafe (unsafeDupablePerformIO)
 import GHC.Natural (Natural(..), powModNatural)
 import GHC.TypeNats (Nat, KnownNat, natVal, natVal')
 
@@ -447,8 +447,42 @@ instance KnownNat m => P.Prim (Mod m) where
         !(I# i#)   = I# i' * sz
   {-# INLINE writeOffAddr# #-}
 
-  setByteArray# = P.defaultSetByteArray#
-  setOffAddr# = P.defaultSetOffAddr#
+  setByteArray# !_ !_ 0# !_ token = token
+  setByteArray# marr off len mx@(Mod x) token = case natVal' (proxy# :: Proxy# m) of
+    NatS#{} -> case x of
+      NatS# x# -> P.setByteArray# marr off len (W# x#) token
+      _        -> error "argument is larger than modulo"
+    NatJ# m# -> case P.writeByteArray# marr off mx token of
+      newToken -> doSet (sz `iShiftL#` lgWordSize#) newToken
+      where
+        !(I# lgWordSize#) = lgWordSize
+        sz = sizeofBigNat# m#
+        off' = (off *# sz) `iShiftL#` lgWordSize#
+        len' = (len *# sz) `iShiftL#` lgWordSize#
+        doSet i tkn
+          | isTrue# (2# *# i <# len') = case copyMutableByteArray# marr off' marr (off' +# i) i tkn of
+            tkn' -> doSet (2# *# i) tkn'
+          | otherwise    = copyMutableByteArray# marr off' marr (off' +# i) (len' -# i) tkn
+  {-# INLINE setByteArray# #-}
+
+  setOffAddr# !_ !_ 0# !_ token = token
+  setOffAddr# marr off len mx@(Mod x) token = case natVal' (proxy# :: Proxy# m) of
+    NatS#{} -> case x of
+      NatS# x# -> P.setOffAddr# marr off len (W# x#) token
+      _        -> error "argument is larger than modulo"
+    NatJ# m# -> case P.writeOffAddr# marr off mx token of
+      newToken -> doSet (sz `iShiftL#` lgWordSize#) newToken
+      where
+        !(I# lgWordSize#) = lgWordSize
+        sz = sizeofBigNat# m#
+        off' = (off *# sz) `iShiftL#` lgWordSize#
+        len' = (len *# sz) `iShiftL#` lgWordSize#
+        doSet i tkn -- = tkn
+          | isTrue# (2# *# i <# len') = case internal (unsafeIOToPrim (copyBytes (Ptr (marr `plusAddr#` (off' +# i))) (Ptr (marr `plusAddr#` off')) (I# i)) :: ST s ()) tkn of
+            (# tkn', () #) -> doSet (2# *# i) tkn'
+          | otherwise    = case internal (unsafeIOToPrim (copyBytes (Ptr (marr `plusAddr#` (off' +# i))) (Ptr (marr `plusAddr#` off')) (I# (len' -# i))) :: ST s ()) tkn of
+            (# tkn', () #) -> tkn'
+  {-# INLINE setOffAddr# #-}
 
 -- | Unboxed vectors of 'Mod' cause more nursery allocations
 -- than boxed ones, but reduce pressure on garbage collector,
