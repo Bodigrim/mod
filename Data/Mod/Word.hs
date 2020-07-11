@@ -20,9 +20,10 @@
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MagicHash                  #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE StandaloneDeriving         #-}
+{-# LANGUAGE PolyKinds                  #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
+{-# LANGUAGE TypeInType                 #-}
 {-# LANGUAGE UnboxedTuples              #-}
 
 module Data.Mod.Word
@@ -79,10 +80,10 @@ newtype Mod (m :: Nat) = Mod
   -- >>> -1 :: Mod 10
   -- (9 `modulo` 10)
   }
-  deriving (Eq, Ord, Generic, Storable)
-
 #ifdef MIN_VERSION_vector
-deriving instance Prim (Mod m)
+  deriving (Eq, Ord, Generic, Storable, Prim)
+#else
+  deriving (Eq, Ord, Generic, Storable)
 #endif
 
 instance NFData (Mod m)
