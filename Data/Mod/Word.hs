@@ -278,6 +278,7 @@ invertModWord x m@(W# m#)
         tz = I# (word2Int# tz#)
 
 -- | Extended binary gcd.
+-- The second argument must be odd.
 invertModWordOdd :: Word -> Word -> Maybe Word
 invertModWordOdd 0 !_ = Nothing
 invertModWordOdd !x !m = go00 0 m 1 x
@@ -307,18 +308,22 @@ invertModWordOdd !x !m = go00 0 m 1 x
     go11 :: Word -> Word -> Word -> Word -> Maybe Word
     go11 !r !s !r' !s' = case s `compare` s' of
       EQ -> if s == 1 then Just r else Nothing
-      LT -> let newR' = r' - r + if r' >= r then 0 else m in
+      LT -> let newR' = r' - r + (r `ge` r') * m in
             let newS' = s' - s in
             let (# hr', hs' #) = doHalf newR' newS' in
             go10 r s hr' hs'
-      GT -> let newR = r - r' + if r >= r' then 0 else m in
+      GT -> let newR = r - r' + (r' `ge` r) * m in
             let newS = s - s' in
             let (# hr, hs #) = doHalf newR newS in
             go01 hr hs r' s'
 
     doHalf :: Word -> Word -> (# Word, Word #)
-    doHalf r s = (# half r + if even r then 0 else halfMp1, half s #)
+    doHalf r s = (# half r + (r .&. 1) * halfMp1, half s #)
     {-# INLINE doHalf #-}
+
+-- | ge x y returns 1 is x >= y and 0 otherwise.
+ge :: Word -> Word -> Word
+ge (W# x) (W# y) = W# (int2Word# (x `geWord#` y))
 
 even :: Word -> Bool
 even x = (x .&. 1) == 0
