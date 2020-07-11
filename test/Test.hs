@@ -59,7 +59,7 @@ main = defaultMain $ testGroup "All"
     testProperty "powMod"      (powModProp      @123456789012345678901234567890) :
     testProperty "invertMod"   (invertModProp   @123456789012345678901234567890) :
     map lawsToTest (laws (Proxy :: Proxy (Mod 123456789012345678901234567890)))
-  , testGroup "Random Mod" $
+  , testGroup "Random Mod"
     [ testProperty "fromInteger" fromIntegerRandomProp
     , testProperty "invertMod"   invertModRandomProp
     , testProperty "powMod"      powModRandomProp
@@ -89,10 +89,10 @@ main = defaultMain $ testGroup "All"
       testProperty "powMod"    (powModWordProp    @4294967295) :
       testProperty "invertMod" (invertModWordProp @4294967295) :
       map lawsToTest (laws (Proxy :: Proxy (Word.Mod 4294967295)))
-  , testGroup "Random Word.Mod" $
+  , testGroup "Random Word.Mod"
     [ testProperty "fromInteger" fromIntegerWordRandomProp
     , testProperty "invertMod"   invertModWordRandomProp
-    , testProperty "invertMod near maxBound" invertModWordRandomProp_nearMaxBound
+    , testProperty "invertMod near maxBound" invertModWordRandomPropNearMaxBound
     , testProperty "powMod"      powModWordRandomProp
     ]
   ]
@@ -194,8 +194,8 @@ invertModWordRandomProp :: Word -> Integer -> Property
 invertModWordRandomProp m n = m > 1 ==> case someNatVal (fromIntegral m) of
   SomeNat (Proxy :: Proxy m) -> invertModWordProp (fromInteger n :: Word.Mod m)
 
-invertModWordRandomProp_nearMaxBound :: Word -> Integer -> Property
-invertModWordRandomProp_nearMaxBound m n = m < maxBound ==>
+invertModWordRandomPropNearMaxBound :: Word -> Integer -> Property
+invertModWordRandomPropNearMaxBound m n = m < maxBound ==>
   case someNatVal (fromIntegral (maxBound - m)) of
     SomeNat (Proxy :: Proxy m) -> invertModWordProp (fromInteger n :: Word.Mod m)
 

@@ -13,14 +13,10 @@
 
 {-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP                        #-}
-{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
-{-# LANGUAGE KindSignatures             #-}
-{-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MagicHash                  #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE PolyKinds                  #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE TypeInType                 #-}
@@ -267,7 +263,7 @@ invertModWord x m@(W# m#)
     Just y -> Just $ goDouble y (1 - x * y)
   where
     k# = ctz# m#
-    m' = m `unsafeShiftR` (I# (word2Int# k#))
+    m' = m `unsafeShiftR` I# (word2Int# k#)
 
     xm' = x * m'
 
@@ -378,8 +374,7 @@ mx@(Mod (W# x#)) ^% a = case natVal mx of
 "powMod/2/Int"         forall x. x ^% (2 :: Int)     = let u = x in u*u
 "powMod/3/Int"         forall x. x ^% (3 :: Int)     = let u = x in u*u*u
 "powMod/2/Word"        forall x. x ^% (2 :: Word)    = let u = x in u*u
-"powMod/3/Word"        forall x. x ^% (3 :: Word)    = let u = x in u*u*u
-#-}
+"powMod/3/Word"        forall x. x ^% (3 :: Word)    = let u = x in u*u*u #-}
 
 infixr 8 ^%
 

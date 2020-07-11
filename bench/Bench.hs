@@ -43,7 +43,7 @@ benchAddition = do
   t1 <- getCurrentTime
   putStrLn $ "Data.Mod.Word      " ++ normalize unit (diffUTCTime t1 t0)
 
-  putStrLn $ "Data.Mod           1x"
+  putStrLn   "Data.Mod           1x"
 
 #ifdef MIN_VERSION_finite_field
   t0 <- getCurrentTime
@@ -87,7 +87,7 @@ benchProduct = do
   t1 <- getCurrentTime
   putStrLn $ "Data.Mod.Word      " ++ normalize unit (diffUTCTime t1 t0)
 
-  putStrLn $ "Data.Mod           1x"
+  putStrLn   "Data.Mod           1x"
 
 #ifdef MIN_VERSION_finite_field
   t0 <- getCurrentTime
@@ -131,7 +131,7 @@ benchInversion = do
   t1 <- getCurrentTime
   putStrLn $ "Data.Mod.Word      " ++ normalize unit (diffUTCTime t1 t0)
 
-  putStrLn $ "Data.Mod           1x"
+  putStrLn   "Data.Mod           1x"
 
 #ifdef MIN_VERSION_finite_field
   t0 <- getCurrentTime
@@ -161,7 +161,7 @@ benchPower = do
   t1 <- getCurrentTime
   putStrLn $ "Data.Mod.Word      " ++ normalize unit (diffUTCTime t1 t0)
 
-  putStrLn $ "Data.Mod           1x"
+  putStrLn   "Data.Mod           1x"
 
 #ifdef MIN_VERSION_finite_field
   t0 <- getCurrentTime

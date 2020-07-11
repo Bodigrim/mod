@@ -16,8 +16,6 @@
 {-# LANGUAGE CPP                   #-}
 {-# LANGUAGE DataKinds             #-}
 {-# LANGUAGE DeriveGeneric         #-}
-{-# LANGUAGE KindSignatures        #-}
-{-# LANGUAGE LambdaCase            #-}
 {-# LANGUAGE MagicHash             #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE ScopedTypeVariables   #-}
@@ -313,8 +311,7 @@ mx ^% a
 "powMod/2/Int"         forall x. x ^% (2 :: Int)     = let u = x in u*u
 "powMod/3/Int"         forall x. x ^% (3 :: Int)     = let u = x in u*u*u
 "powMod/2/Word"        forall x. x ^% (2 :: Word)    = let u = x in u*u
-"powMod/3/Word"        forall x. x ^% (3 :: Word)    = let u = x in u*u*u
-#-}
+"powMod/3/Word"        forall x. x ^% (3 :: Word)    = let u = x in u*u*u #-}
 
 infixr 8 ^%
 
