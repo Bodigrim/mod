@@ -24,8 +24,9 @@ import Test.QuickCheck.Classes (semiringLaws, ringLaws)
 #endif
 
 #ifdef MIN_VERSION_vector
+import Data.Primitive (Prim)
 import Data.Vector.Unboxed (Unbox)
-import Test.QuickCheck.Classes (muvectorLaws)
+import Test.QuickCheck.Classes (muvectorLaws, primLaws)
 #endif
 
 main :: IO ()
@@ -98,13 +99,13 @@ main = defaultMain $ testGroup "All"
 
 #ifdef MIN_VERSION_semirings
 #ifdef MIN_VERSION_vector
-laws1 :: (Eq a, Ord a, Show a, Num a, Storable a, Ring a, Unbox a, Arbitrary a) => Proxy a -> [Laws]
+laws1 :: (Eq a, Ord a, Show a, Num a, Storable a, Ring a, Prim a, Unbox a, Arbitrary a) => Proxy a -> [Laws]
 #else
 laws1 :: (Eq a, Ord a, Show a, Num a, Storable a, Ring a, Arbitrary a) => Proxy a -> [Laws]
 #endif
 #else
 #ifdef MIN_VERSION_vector
-laws1 :: (Eq a, Ord a, Show a, Num a, Storable a, Unbox a, Arbitrary a) => Proxy a -> [Laws]
+laws1 :: (Eq a, Ord a, Show a, Num a, Storable a, Prim a, Unbox a, Arbitrary a) => Proxy a -> [Laws]
 #else
 laws1 :: (Eq a, Ord a, Show a, Num a, Storable a, Arbitrary a) => Proxy a -> [Laws]
 #endif
@@ -120,19 +121,20 @@ laws1 p =
     , ringLaws        p
 #endif
 #ifdef MIN_VERSION_vector
+    , primLaws        p
     , muvectorLaws    p
 #endif
     ]
 
 #ifdef MIN_VERSION_semirings
 #ifdef MIN_VERSION_vector
-laws :: (Eq a, Ord a, Show a, Num a, Storable a, Ring a, Enum a, Bounded a, Unbox a, Arbitrary a) => Proxy a -> [Laws]
+laws :: (Eq a, Ord a, Show a, Num a, Storable a, Ring a, Enum a, Bounded a, Prim a, Unbox a, Arbitrary a) => Proxy a -> [Laws]
 #else
 laws :: (Eq a, Ord a, Show a, Num a, Storable a, Ring a, Enum a, Bounded a, Arbitrary a) => Proxy a -> [Laws]
 #endif
 #else
 #ifdef MIN_VERSION_vector
-laws :: (Eq a, Ord a, Show a, Num a, Storable a, Enum a, Bounded a, Unbox a, Arbitrary a) => Proxy a -> [Laws]
+laws :: (Eq a, Ord a, Show a, Num a, Storable a, Enum a, Bounded a, Prim a, Unbox a, Arbitrary a) => Proxy a -> [Laws]
 #else
 laws :: (Eq a, Ord a, Show a, Num a, Storable a, Enum a, Bounded a, Arbitrary a) => Proxy a -> [Laws]
 #endif

@@ -44,6 +44,8 @@ import Data.Semiring (Semiring(..), Ring(..))
 #endif
 #ifdef MIN_VERSION_vector
 import Control.Monad.Primitive
+import Control.Monad.ST
+import qualified Data.Primitive.Types as P
 import Data.Primitive.ByteArray
 import qualified Data.Vector.Generic         as G
 import qualified Data.Vector.Generic.Mutable as M
@@ -53,6 +55,7 @@ import Foreign.Storable (Storable(..))
 import GHC.Exts
 import GHC.Generics
 import GHC.Integer.GMP.Internals
+import GHC.IO.Unsafe (unsafeDupablePerformIO)
 import GHC.Natural (Natural(..), powModNatural)
 import GHC.TypeNats (Nat, KnownNat, natVal, natVal')
 
@@ -327,15 +330,22 @@ instance KnownNat m => Storable (Mod m) where
   sizeOf _ = case natVal' (proxy# :: Proxy# m) of
     NatS#{}  -> sizeOf (0 :: Word)
     NatJ# m# -> I# (sizeofBigNat# m#) `shiftL` lgWordSize
+  {-# INLINE sizeOf #-}
+
   alignment _ = alignment (0 :: Word)
+  {-# INLINE alignment #-}
+
   peek (Ptr addr#) = case natVal' (proxy# :: Proxy# m) of
     NatS#{} -> do
       W# w# <- peek (Ptr addr#)
       pure . Mod $! NatS# w#
     NatJ# m# -> do
-      let !(I# sz#) = I# (sizeofBigNat# m#) `shiftL` lgWordSize
+      let !(I# lgWordSize#) = lgWordSize
+          sz# = sizeofBigNat# m# `iShiftL#` lgWordSize#
       bn <- importBigNatFromAddr addr# (int2Word# sz#) 0#
-      pure . Mod $! if I# (sizeofBigNat# bn) == 1 then NatS# (bigNatToWord bn) else NatJ# bn
+      pure . Mod $! bigNatToNat bn
+  {-# INLINE peek #-}
+
   poke (Ptr addr#) (Mod x) = case natVal' (proxy# :: Proxy# m) of
     NatS#{} -> case x of
       NatS# x# -> poke (Ptr addr#) (W# x#)
@@ -351,13 +361,96 @@ instance KnownNat m => Storable (Mod m) where
           pokeElemOff (Ptr addr#) off (0 :: Word8)
       where
         sz = I# (sizeofBigNat# m#)
+  {-# INLINE poke #-}
 
 #ifdef MIN_VERSION_vector
 
+instance KnownNat m => P.Prim (Mod m) where
+  sizeOf# x    = let !(I# sz#) = sizeOf x    in sz#
+  {-# INLINE sizeOf# #-}
+
+  alignment# x = let !(I# a#)  = alignment x in a#
+  {-# INLINE alignment# #-}
+
+  indexByteArray# arr# i' = case natVal' (proxy# :: Proxy# m) of
+    NatS#{} -> Mod (NatS# w#)
+      where
+        !(W# w#) = P.indexByteArray# arr# i'
+    NatJ# m# -> Mod $ bigNatToNat $ importBigNatFromByteArray arr# (int2Word# i#) (int2Word# sz#) 0#
+      where
+        !(I# lgWordSize#) = lgWordSize
+        sz# = sizeofBigNat# m# `iShiftL#` lgWordSize#
+        i# = i' *# sz#
+  {-# INLINE indexByteArray# #-}
+
+  indexOffAddr# arr# i' = case natVal' (proxy# :: Proxy# m) of
+    NatS#{} -> Mod (NatS# w#)
+      where
+        !(W# w#) = P.indexOffAddr# arr# i'
+    NatJ# m# -> Mod $ bigNatToNat $ unsafeDupablePerformIO $ importBigNatFromAddr (arr# `plusAddr#` i#) (int2Word# sz#) 0#
+      where
+        !(I# lgWordSize#) = lgWordSize
+        sz# = sizeofBigNat# m# `iShiftL#` lgWordSize#
+        i# = i' *# sz#
+  {-# INLINE indexOffAddr# #-}
+
+  readByteArray# marr !i' token = case natVal' (proxy# :: Proxy# m) of
+    NatS#{} -> case P.readByteArray# marr i' token of
+      (# newToken, W# w# #) -> (# newToken, Mod (NatS# w#) #)
+    NatJ# m# -> case unsafeFreezeByteArray# marr token of
+      (# newToken, arr #) -> (# newToken, Mod (bigNatToNat (importBigNatFromByteArray arr (int2Word# i#) (int2Word# sz#) 0#)) #)
+      where
+        !(I# lgWordSize#) = lgWordSize
+        sz# = sizeofBigNat# m# `iShiftL#` lgWordSize#
+        i# = i' *# sz#
+  {-# INLINE readByteArray# #-}
+
+  readOffAddr# marr !i' token = case natVal' (proxy# :: Proxy# m) of
+    NatS#{} -> case P.readOffAddr# marr i' token of
+      (# newToken, W# w# #) -> (# newToken, Mod (NatS# w#) #)
+    NatJ# m# -> case internal (unsafeIOToPrim (importBigNatFromAddr (marr `plusAddr#` i#) (int2Word# sz#) 0#) :: ST s BigNat) token of
+      (# newToken, bn #) -> (# newToken, Mod (bigNatToNat bn) #)
+      where
+        !(I# lgWordSize#) = lgWordSize
+        sz# = sizeofBigNat# m# `iShiftL#` lgWordSize#
+        i# = i' *# sz#
+  {-# INLINE readOffAddr# #-}
+
+  writeByteArray# marr !i' !(Mod x) token = case natVal' (proxy# :: Proxy# m) of
+    NatS#{} -> case x of
+      NatS# x# -> P.writeByteArray# marr i' (W# x#) token
+      _        -> error "argument is larger than modulo"
+    NatJ# m# -> case x of
+      NatS# x# -> case P.writeByteArray# marr i# (W# x#) token of
+        newToken -> P.setByteArray# marr (i# +# 1#) (sz# -# 1#) (0 :: Word) newToken
+      NatJ# bn -> case internal (unsafeIOToPrim (exportBigNatToMutableByteArray bn (unsafeCoerce# marr) (int2Word# (i# `iShiftL#` lgWordSize#)) 0#) :: ST s Word) token of
+        (# newToken, W# l# #) -> P.setByteArray# marr (i# `iShiftL#` lgWordSize# +# word2Int# l#) (sz# `iShiftL#` lgWordSize# -# word2Int# l#) (0 :: Word8) newToken
+      where
+        !(I# lgWordSize#) = lgWordSize
+        !sz@(I# sz#) = I# (sizeofBigNat# m#)
+        !(I# i#)     = I# i' * sz
+  {-# INLINE writeByteArray# #-}
+
+  writeOffAddr# marr !i' !(Mod x) token = case natVal' (proxy# :: Proxy# m) of
+    NatS#{} -> case x of
+      NatS# x# -> P.writeOffAddr# marr i' (W# x#) token
+      _        -> error "argument is larger than modulo"
+    NatJ# m# -> case x of
+      NatS# x# -> case P.writeOffAddr# marr i# (W# x#) token of
+        newToken -> P.setOffAddr# marr (i# +# 1#) (sz# -# 1#) (0 :: Word) newToken
+      NatJ# bn -> case internal (unsafeIOToPrim (exportBigNatToAddr bn (marr `plusAddr#` (i# `iShiftL#` lgWordSize#)) 0#) :: ST s Word) token of
+        (# newToken, W# l# #) -> P.setOffAddr# marr (i# `iShiftL#` lgWordSize# +# word2Int# l#) (sz# `iShiftL#` lgWordSize# -# word2Int# l#) (0 :: Word8) newToken
+      where
+        !(I# lgWordSize#) = lgWordSize
+        !sz@(I# sz#) = I# (sizeofBigNat# m#)
+        !(I# i#)   = I# i' * sz
+  {-# INLINE writeOffAddr# #-}
+
+  setByteArray# = P.defaultSetByteArray#
+  setOffAddr# = P.defaultSetOffAddr#
+
 importNaturalFromByteArray :: ByteArray -> Int -> Int -> Natural
-importNaturalFromByteArray (ByteArray arr#) (I# off#) (I# len#)
-  | I# (sizeofBigNat# bn) == 1 = NatS# (bigNatToWord bn)
-  | otherwise                  = NatJ# bn
+importNaturalFromByteArray (ByteArray arr#) (I# off#) (I# len#) = bigNatToNat bn
   where
     bn = importBigNatFromByteArray arr# (int2Word# off#) (int2Word# len#) 0#
 

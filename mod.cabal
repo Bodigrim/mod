@@ -63,6 +63,7 @@ test-suite mod-tests
       semirings >= 0.5
   if flag(vector)
     build-depends:
+      primitive,
       quickcheck-classes >=0.6.3,
       vector >= 0.12
   type: exitcode-stdio-1.0

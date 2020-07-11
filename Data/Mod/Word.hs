@@ -20,6 +20,7 @@
 {-# LANGUAGE LambdaCase                 #-}
 {-# LANGUAGE MagicHash                  #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE StandaloneDeriving         #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UnboxedTuples              #-}
@@ -41,6 +42,7 @@ import Data.Ratio
 import Data.Semiring (Semiring(..), Ring(..))
 #endif
 #ifdef MIN_VERSION_vector
+import Data.Primitive (Prim)
 import qualified Data.Vector.Generic         as G
 import qualified Data.Vector.Generic.Mutable as M
 import qualified Data.Vector.Primitive       as P
@@ -78,6 +80,10 @@ newtype Mod (m :: Nat) = Mod
   -- (9 `modulo` 10)
   }
   deriving (Eq, Ord, Generic, Storable)
+
+#ifdef MIN_VERSION_vector
+deriving instance Prim (Mod m)
+#endif
 
 instance NFData (Mod m)
 
