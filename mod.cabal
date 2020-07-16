@@ -1,5 +1,5 @@
 name:          mod
-version:       0.1.1.0
+version:       0.1.2.0
 cabal-version: >=1.10
 build-type:    Simple
 license:       MIT
@@ -29,7 +29,7 @@ flag semirings
   default: True
 
 flag vector
-  description: Derive unboxed vector instances
+  description: Derive unboxed and primitive vector instances
   default: True
 
 library
