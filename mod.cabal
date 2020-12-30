@@ -36,7 +36,7 @@ library
   build-depends:
     base >=4.10 && <5,
     deepseq,
-    integer-gmp <1.1
+    integer-gmp <1.2
   if flag(semirings)
     build-depends:
       semirings >= 0.5

@@ -108,7 +108,7 @@ instance KnownNat m => Bounded (Mod m) where
 
 bigNatToNat :: BigNat -> Natural
 bigNatToNat r# =
-  if isTrue# (sizeofBigNat# r# ==# 1#) then NatS# (bigNatToWord r#) else NatJ# r#
+  if isTrue# (sizeofBigNat# r# <=# 1#) then NatS# (bigNatToWord r#) else NatJ# r#
 
 subIfGe :: BigNat -> BigNat -> Natural
 subIfGe z# m# = case z# `compareBigNat` m# of
