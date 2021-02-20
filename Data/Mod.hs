@@ -93,8 +93,8 @@ instance KnownNat m => Enum (Mod m) where
   succ x = if x == maxBound then throw Overflow  else coerce (succ @Natural) x
   pred x = if x == minBound then throw Underflow else coerce (pred @Natural) x
 
-  toEnum   = fromIntegral
-  fromEnum = fromIntegral . unMod
+  toEnum   = (fromIntegral :: Int -> Mod m)
+  fromEnum = (fromIntegral :: Natural -> Int) . unMod
 
   enumFrom x       = enumFromTo x maxBound
   enumFromThen x y = enumFromThenTo x y (if y >= x then maxBound else minBound)
@@ -293,8 +293,15 @@ invertMod mx
 mx ^% a
   | a < 0     = case invertMod mx of
     Nothing ->  throw DivideByZero
-    Just my ->  Mod $ powModNatural (unMod my) (fromIntegral (-a)) (natVal mx)
-  | otherwise = Mod $ powModNatural (unMod mx) (fromIntegral a)    (natVal mx)
+    Just my ->  Mod $ powModNatural (unMod my) (fromIntegral' (-a)) (natVal mx)
+  | otherwise = Mod $ powModNatural (unMod mx) (fromIntegral' a)    (natVal mx)
+  where
+#if __GLASGOW_HASKELL__ == 900 && __GLASGOW_HASKELL_PATCHLEVEL1__ == 1
+    -- Cannot use fromIntegral because of https://gitlab.haskell.org/ghc/ghc/-/issues/19411
+    fromIntegral' = fromInteger . toInteger
+#else
+    fromIntegral' = fromIntegral
+#endif
 {-# INLINABLE [1] (^%) #-}
 
 {-# SPECIALISE [1] (^%) ::
@@ -355,7 +362,7 @@ instance KnownNat m => Storable (Mod m) where
           pokeElemOff (Ptr addr#) off (0 :: Word)
       NatJ# bn -> do
         l <- exportBigNatToAddr bn addr# 0#
-        forM_ [fromIntegral l .. (sz `shiftL` lgWordSize) - 1] $ \off ->
+        forM_ [(fromIntegral :: Word -> Int) l .. (sz `shiftL` lgWordSize) - 1] $ \off ->
           pokeElemOff (Ptr addr#) off (0 :: Word8)
       where
         sz = I# (sizeofBigNat# m#)
