@@ -26,7 +26,9 @@ jobs:
     strategy:
       matrix:
         include:
-          - ghc: 8.10.1
+          - ghc: 9.0.1
+            allow-failure: false
+          - ghc: 8.10.4
             allow-failure: false
           - ghc: 8.8.3
             allow-failure: false
