@@ -5,7 +5,7 @@
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
-module Main where
+module Main (main) where
 
 import Data.Bits
 import Data.Mod
@@ -63,6 +63,8 @@ main = defaultMain $ testGroup "All"
     [ testProperty "fromInteger" fromIntegerRandomProp
     , testProperty "invertMod"   invertModRandomProp
     , testProperty "powMod"      powModRandomProp
+    , testProperty "powMod on sum" powModRandomAdditiveProp
+    , testProperty "powMod special case" powModCase
     ]
 
   , testGroup "Word.Mod 1" $
@@ -94,6 +96,8 @@ main = defaultMain $ testGroup "All"
     , testProperty "invertMod"   invertModWordRandomProp
     , testProperty "invertMod near maxBound" invertModWordRandomPropNearMaxBound
     , testProperty "powMod"      powModWordRandomProp
+    , testProperty "powMod on sum" powModWordRandomAdditiveProp
+    , testProperty "powMod special case" powModWordCase
     ]
   ]
 
@@ -210,8 +214,8 @@ invertModWordProp x = case Word.invertMod x of
 -- powMod
 
 powModRandomProp :: Positive Integer -> Integer -> Int -> Property
-powModRandomProp (Positive m) n k = m > 1 ==> case someNatVal (fromInteger m) of
-  SomeNat (Proxy :: Proxy m) -> powModProp (fromInteger n :: Mod m) k
+powModRandomProp (Positive m) x n = m > 1 ==> case someNatVal (fromInteger m) of
+  SomeNat (Proxy :: Proxy m) -> powModProp (fromInteger x :: Mod m) n
 
 powModProp :: KnownNat m => Mod m -> Int -> Property
 powModProp x n
@@ -220,9 +224,25 @@ powModProp x n
     Nothing -> property True
     Just x' -> x ^% n === getProduct (stimes (-n) (Product x'))
 
+powModRandomAdditiveProp :: Positive Integer -> Integer -> Huge Integer -> Huge Integer -> Property
+powModRandomAdditiveProp (Positive m) x (Huge n1) (Huge n2) = m > 1 ==> case someNatVal (fromInteger m) of
+  SomeNat (Proxy :: Proxy m) -> powModAdditiveProp (fromInteger x :: Mod m) n1 n2
+
+powModAdditiveProp :: KnownNat m => Mod m -> Integer -> Integer -> Property
+powModAdditiveProp x n1 n2
+  | invertMod x == Nothing, n1 < 0 || n2 < 0
+  = property True
+  | otherwise
+  = (x ^% n1) * (x ^% n2) === x ^% (n1 + n2)
+
+powModCase :: Property
+powModCase = once $ 0 ^% n === (0 :: Mod 2)
+  where
+    n = 1 `shiftL` 64 :: Integer
+
 powModWordRandomProp :: Word -> Integer -> Int -> Property
-powModWordRandomProp m n k = m > 1 ==> case someNatVal (fromIntegral m) of
-  SomeNat (Proxy :: Proxy m) -> powModWordProp (fromInteger n :: Word.Mod m) k
+powModWordRandomProp m x k = m > 1 ==> case someNatVal (fromIntegral m) of
+  SomeNat (Proxy :: Proxy m) -> powModWordProp (fromInteger x :: Word.Mod m) k
 
 powModWordProp :: KnownNat m => Word.Mod m -> Int -> Property
 powModWordProp x n
@@ -230,3 +250,29 @@ powModWordProp x n
   | otherwise = case Word.invertMod x of
     Nothing -> property True
     Just x' -> x Word.^% n === getProduct (stimes (-n) (Product x'))
+
+powModWordRandomAdditiveProp :: Word -> Integer -> Huge Integer -> Huge Integer -> Property
+powModWordRandomAdditiveProp m x (Huge n1) (Huge n2) = m > 1 ==> case someNatVal (fromIntegral m) of
+  SomeNat (Proxy :: Proxy m) -> powModWordAdditiveProp (fromInteger x :: Word.Mod m) n1 n2
+
+powModWordAdditiveProp :: KnownNat m => Word.Mod m -> Integer -> Integer -> Property
+powModWordAdditiveProp x n1 n2
+  | Word.invertMod x == Nothing, n1 < 0 || n2 < 0
+  = property True
+  | otherwise
+  = (x Word.^% n1) * (x Word.^% n2) === x Word.^% (n1 + n2)
+
+powModWordCase :: Property
+powModWordCase = once $ 0 Word.^% n === (0 :: Word.Mod 2)
+  where
+    n = 1 `shiftL` 64 :: Integer
+
+newtype Huge a = Huge { getHuge :: a }
+  deriving (Show)
+
+instance (Bits a, Num a, Arbitrary a) => Arbitrary (Huge a) where
+  arbitrary = do
+    Positive l <- arbitrary
+    ds <- vector l
+    return $ Huge $ foldl1 (\acc n -> acc `shiftL` 63 + n) ds
+  shrink (Huge n) = Huge <$> shrink n
