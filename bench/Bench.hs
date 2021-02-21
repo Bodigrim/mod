@@ -1,13 +1,17 @@
-{-# LANGUAGE CPP       #-}
-{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE BangPatterns        #-}
+{-# LANGUAGE CPP                 #-}
+{-# LANGUAGE DataKinds           #-}
+{-# LANGUAGE PolyKinds           #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE ViewPatterns        #-}
 
 {-# OPTIONS_GHC -fno-warn-type-defaults -fno-warn-name-shadowing #-}
 
 module Main where
 
-import Data.Maybe
-import Data.Time.Clock
-import System.IO
+import Data.Proxy
+import Test.Tasty.Bench
 
 import qualified Data.Mod
 import qualified Data.Mod.Word
@@ -24,180 +28,162 @@ import qualified Data.Modular
 import qualified Numeric.Modular
 #endif
 
-import Text.Printf
-
-normalize :: NominalDiffTime -> NominalDiffTime -> String
-normalize unit t = printf "%.2fx" (fromRational (toRational t / toRational unit) :: Double)
-
-benchAddition :: IO ()
-benchAddition = do
-  putStrLn "Sum"
-
-  t0 <- getCurrentTime
-  print (sum [1..10^8] :: Data.Mod.Mod 1000000007)
-  t1 <- getCurrentTime
-  let unit = diffUTCTime t1 t0
-
-  t0 <- getCurrentTime
-  print (sum [1..10^8] :: Data.Mod.Word.Mod 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "Data.Mod.Word      " ++ normalize unit (diffUTCTime t1 t0)
-
-  putStrLn   "Data.Mod           1x"
-
-#ifdef MIN_VERSION_finite_field
-  t0 <- getCurrentTime
-  print (sum [1..10^8] :: Data.FiniteField.PrimeField.PrimeField 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "finite-field       " ++ normalize unit (diffUTCTime t1 t0)
-#endif
-
-#ifdef MIN_VERSION_finite_typelits
-  t0 <- getCurrentTime
-  print (sum [1..10^8] :: Data.Finite.Finite 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "finite-typelits    " ++ normalize unit (diffUTCTime t1 t0)
-#endif
-
-#ifdef MIN_VERSION_modular_arithmetic
-  t0 <- getCurrentTime
-  print (sum [1..10^8] :: Data.Modular.Mod Integer 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "modular-arithmetic " ++ normalize unit (diffUTCTime t1 t0)
-#endif
+type P = 1000000007
 
 #ifdef MIN_VERSION_modular
-  t0 <- getCurrentTime
-  print (sum (map fromIntegral [1..10^8]) :: Numeric.Modular.Mod 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "modular            " ++ normalize unit (diffUTCTime t1 t0)
+forceModular :: Numeric.Modular.Mod P -> Numeric.Modular.Mod P
+forceModular a = (a == a) `seq` a
 #endif
 
-benchProduct :: IO ()
-benchProduct = do
-  putStrLn "Product"
-
-  t0 <- getCurrentTime
-  print (product [1..10^8] :: Data.Mod.Mod 1000000007)
-  t1 <- getCurrentTime
-  let unit = diffUTCTime t1 t0
-
-  t0 <- getCurrentTime
-  print (product [1..10^8] :: Data.Mod.Word.Mod 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "Data.Mod.Word      " ++ normalize unit (diffUTCTime t1 t0)
-
-  putStrLn   "Data.Mod           1x"
-
+benchSum :: Benchmark
+benchSum = bgroup "Sum"
+  [ measure "Data.Mod" (Proxy @Data.Mod.Mod)
+  , measure "Data.Mod.Word" (Proxy @Data.Mod.Word.Mod)
 #ifdef MIN_VERSION_finite_field
-  t0 <- getCurrentTime
-  print (product [1..10^8] :: Data.FiniteField.PrimeField.PrimeField 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "finite-field       " ++ normalize unit (diffUTCTime t1 t0)
+  , measure "finite-field" (Proxy @Data.FiniteField.PrimeField.PrimeField)
 #endif
-
 #ifdef MIN_VERSION_finite_typelits
-  t0 <- getCurrentTime
-  print (product [1..10^8] :: Data.Finite.Finite 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "finite-typelits    " ++ normalize unit (diffUTCTime t1 t0)
+  , measure "finite-typelits" (Proxy @Data.Finite.Finite)
 #endif
-
 #ifdef MIN_VERSION_modular_arithmetic
-  t0 <- getCurrentTime
-  print (product [1..10^8] :: Data.Modular.Mod Integer 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "modular-arithmetic " ++ normalize unit (diffUTCTime t1 t0)
+  , measure "modular-arithmetic" (Proxy @(Data.Modular.Mod Integer))
 #endif
+#ifdef MIN_VERSION_modular
+  , bench "modular" $ nf (show . sumNModular) lim
+#endif
+  ]
+  where
+    lim = 100000000
+
+    measure :: (Eq (t P), Num (t P)) => String -> Proxy t -> Benchmark
+    measure name p = bench name $ whnf (sumN p) lim
+    {-# INLINE measure #-}
+
+    sumN :: (Eq (t P), Num (t P)) => Proxy t -> Int -> t P
+    sumN = const $ \n -> go 0 (fromIntegral n)
+      where
+        go !acc 0 = acc
+        go acc n = go (acc + n) (n - 1)
+    {-# INLINE sumN #-}
 
 #ifdef MIN_VERSION_modular
-  t0 <- getCurrentTime
-  print (product (map fromIntegral [1..10^8]) :: Numeric.Modular.Mod 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "modular            " ++ normalize unit (diffUTCTime t1 t0)
+    sumNModular :: Int -> Numeric.Modular.Mod P
+    sumNModular = \n -> go 0 (fromIntegral n)
+      where
+        go acc@(forceModular -> !_) 0 = acc
+        go acc n = go (acc + n) (n - 1)
+    {-# INLINE sumNModular #-}
 #endif
 
-benchInversion :: IO ()
-benchInversion = do
-  putStrLn "Inversion"
-
-  t0 <- getCurrentTime
-  print (sum (map (fromJust . Data.Mod.invertMod) [1..10^7]) :: Data.Mod.Mod 1000000007)
-  t1 <- getCurrentTime
-  let unit = diffUTCTime t1 t0
-
-  t0 <- getCurrentTime
-  print (sum (map (fromJust . Data.Mod.Word.invertMod) [1..10^7]) :: Data.Mod.Word.Mod 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "Data.Mod.Word      " ++ normalize unit (diffUTCTime t1 t0)
-
-  putStrLn   "Data.Mod           1x"
-
+benchProduct :: Benchmark
+benchProduct = bgroup "Product"
+  [ measure "Data.Mod" (Proxy @Data.Mod.Mod)
+  , measure "Data.Mod.Word" (Proxy @Data.Mod.Word.Mod)
 #ifdef MIN_VERSION_finite_field
-  t0 <- getCurrentTime
-  print (sum (map recip [1..10^7]) :: Data.FiniteField.PrimeField.PrimeField 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "finite-field       " ++ normalize unit (diffUTCTime t1 t0)
+  , measure "finite-field" (Proxy @Data.FiniteField.PrimeField.PrimeField)
 #endif
-
-#ifdef MIN_VERSION_modular_arithmetic
-  t0 <- getCurrentTime
-  print (sum (map Data.Modular.inv [1..10^7]) :: Data.Modular.Mod Integer 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "modular-arithmetic " ++ normalize unit (diffUTCTime t1 t0)
-#endif
-
-benchPower :: IO ()
-benchPower = do
-  putStrLn "Power"
-
-  t0 <- getCurrentTime
-  print (sum (map (2 ^) [1..10^6]) :: Data.Mod.Mod 1000000007)
-  t1 <- getCurrentTime
-  let unit = diffUTCTime t1 t0
-
-  t0 <- getCurrentTime
-  print (sum (map (2 ^) [1..10^6]) :: Data.Mod.Word.Mod 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "Data.Mod.Word      " ++ normalize unit (diffUTCTime t1 t0)
-
-  putStrLn   "Data.Mod           1x"
-
-#ifdef MIN_VERSION_finite_field
-  t0 <- getCurrentTime
-  print (sum (map (2 ^) [1..10^6]) :: Data.FiniteField.PrimeField.PrimeField 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "finite-field       " ++ normalize unit (diffUTCTime t1 t0)
-#endif
-
 #ifdef MIN_VERSION_finite_typelits
-  t0 <- getCurrentTime
-  print (sum (map (2 ^) [1..10^6]) :: Data.Finite.Finite 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "finite-typelits    " ++ normalize unit (diffUTCTime t1 t0)
+  , measure "finite-typelits" (Proxy @Data.Finite.Finite)
 #endif
-
 #ifdef MIN_VERSION_modular_arithmetic
-  t0 <- getCurrentTime
-  print (sum (map (2 ^) [1..10^6]) :: Data.Modular.Mod Integer 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "modular-arithmetic " ++ normalize unit (diffUTCTime t1 t0)
+  , measure "modular-arithmetic" (Proxy @(Data.Modular.Mod Integer))
 #endif
+#ifdef MIN_VERSION_modular
+  , bench "modular" $ nf (show . productNModular) lim
+#endif
+  ]
+  where
+    lim = 100000000
+
+    measure :: (Eq (t P), Num (t P)) => String -> Proxy t -> Benchmark
+    measure name p = bench name $ whnf (productN p) lim
+    {-# INLINE measure #-}
+
+    productN :: (Eq (t P), Num (t P)) => Proxy t -> Int -> t P
+    productN = const $ \n -> go 1 (fromIntegral n)
+      where
+        go !acc 0 = acc
+        go acc n = go (acc * n) (n - 1)
+    {-# INLINE productN #-}
 
 #ifdef MIN_VERSION_modular
-  t0 <- getCurrentTime
-  print (sum (map (2 ^) [1..10^6]) :: Numeric.Modular.Mod 1000000007)
-  t1 <- getCurrentTime
-  putStrLn $ "modular            " ++ normalize unit (diffUTCTime t1 t0)
+    productNModular :: Int -> Numeric.Modular.Mod P
+    productNModular = \n -> go 1 (fromIntegral n)
+      where
+        go acc@(forceModular -> !_) 0 = acc
+        go acc n = go (acc * n) (n - 1)
+    {-# INLINE productNModular #-}
+#endif
+
+benchInversion :: Benchmark
+benchInversion = bgroup "Inversion"
+  [ measure "Data.Mod" (Proxy @Data.Mod.Mod)
+  , measure "Data.Mod.Word" (Proxy @Data.Mod.Word.Mod)
+#ifdef MIN_VERSION_finite_field
+  , measure "finite-field" (Proxy @Data.FiniteField.PrimeField.PrimeField)
+#endif
+#ifdef MIN_VERSION_modular_arithmetic
+  , measure "modular-arithmetic" (Proxy @(Data.Modular.Mod Integer))
+#endif
+  ]
+  where
+    lim = 3000000
+
+    measure :: (Eq (t P), Fractional (t P)) => String -> Proxy t -> Benchmark
+    measure name p = bench name $ whnf (invertN p) lim
+    {-# INLINE measure #-}
+
+    invertN :: (Eq (t P), Fractional (t P)) => Proxy t -> Int -> t P
+    invertN = const $ \n -> go 0 (fromIntegral n)
+      where
+        go !acc 0 = acc
+        go acc n = go (acc + recip n) (n - 1)
+    {-# INLINE invertN #-}
+
+benchPower :: Benchmark
+benchPower = bgroup "Power"
+  [ measure "Data.Mod" (Proxy @Data.Mod.Mod)
+  , measure "Data.Mod.Word" (Proxy @Data.Mod.Word.Mod)
+#ifdef MIN_VERSION_finite_field
+  , measure "finite-field" (Proxy @Data.FiniteField.PrimeField.PrimeField)
+#endif
+#ifdef MIN_VERSION_finite_typelits
+  , measure "finite-typelits" (Proxy @Data.Finite.Finite)
+#endif
+#ifdef MIN_VERSION_modular_arithmetic
+  , measure "modular-arithmetic" (Proxy @(Data.Modular.Mod Integer))
+#endif
+#ifdef MIN_VERSION_modular
+  , bench "modular" $ nf (show . powerNModular) lim
+#endif
+  ]
+  where
+    lim = 1000000
+
+    measure :: (Eq (t P), Num (t P)) => String -> Proxy t -> Benchmark
+    measure name p = bench name $ whnf (powerN p) lim
+    {-# INLINE measure #-}
+
+    powerN :: (Eq (t P), Num (t P)) => Proxy t -> Int -> t P
+    powerN = const $ go 0
+      where
+        go !acc 0 = acc
+        go acc n = go (acc + 2 ^ n) (n - 1)
+    {-# INLINE powerN #-}
+
+#ifdef MIN_VERSION_modular
+    powerNModular :: Int -> Numeric.Modular.Mod P
+    powerNModular = go 0
+      where
+        go acc@(forceModular -> !_) 0 = acc
+        go acc n = go (acc + 2 ^ n) (n - 1)
+    {-# INLINE powerNModular #-}
 #endif
 
 main :: IO ()
-main = do
-  hSetBuffering stdout LineBuffering
-  benchAddition
-  putStrLn ""
-  benchProduct
-  putStrLn ""
-  benchInversion
-  putStrLn ""
-  benchPower
+main = defaultMain
+  [ benchSum
+  , benchProduct
+  , benchInversion
+  , benchPower
+  ]
