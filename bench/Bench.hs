@@ -38,21 +38,22 @@ forceModular a = (a == a) `seq` a
 benchSum :: Benchmark
 benchSum = bgroup "Sum"
   [ measure "Data.Mod" (Proxy @Data.Mod.Mod)
-  , measure "Data.Mod.Word" (Proxy @Data.Mod.Word.Mod)
+  , cmp $ measure "Data.Mod.Word" (Proxy @Data.Mod.Word.Mod)
 #ifdef MIN_VERSION_finite_field
-  , measure "finite-field" (Proxy @Data.FiniteField.PrimeField.PrimeField)
+  , cmp $ measure "finite-field" (Proxy @Data.FiniteField.PrimeField.PrimeField)
 #endif
 #ifdef MIN_VERSION_finite_typelits
-  , measure "finite-typelits" (Proxy @Data.Finite.Finite)
+  , cmp $ measure "finite-typelits" (Proxy @Data.Finite.Finite)
 #endif
 #ifdef MIN_VERSION_modular_arithmetic
-  , measure "modular-arithmetic" (Proxy @(Data.Modular.Mod Integer))
+  , cmp $ measure "modular-arithmetic" (Proxy @(Data.Modular.Mod Integer))
 #endif
 #ifdef MIN_VERSION_modular
-  , bench "modular" $ nf (show . sumNModular) lim
+  , cmp $ bench "modular" $ nf (show . sumNModular) lim
 #endif
   ]
   where
+    cmp = bcompare "$NF == \"Data.Mod\" && $(NF-1) == \"Sum\""
     lim = 100000000
 
     measure :: (Eq (t P), Num (t P)) => String -> Proxy t -> Benchmark
@@ -78,21 +79,22 @@ benchSum = bgroup "Sum"
 benchProduct :: Benchmark
 benchProduct = bgroup "Product"
   [ measure "Data.Mod" (Proxy @Data.Mod.Mod)
-  , measure "Data.Mod.Word" (Proxy @Data.Mod.Word.Mod)
+  , cmp $ measure "Data.Mod.Word" (Proxy @Data.Mod.Word.Mod)
 #ifdef MIN_VERSION_finite_field
-  , measure "finite-field" (Proxy @Data.FiniteField.PrimeField.PrimeField)
+  , cmp $ measure "finite-field" (Proxy @Data.FiniteField.PrimeField.PrimeField)
 #endif
 #ifdef MIN_VERSION_finite_typelits
-  , measure "finite-typelits" (Proxy @Data.Finite.Finite)
+  , cmp $ measure "finite-typelits" (Proxy @Data.Finite.Finite)
 #endif
 #ifdef MIN_VERSION_modular_arithmetic
-  , measure "modular-arithmetic" (Proxy @(Data.Modular.Mod Integer))
+  , cmp $ measure "modular-arithmetic" (Proxy @(Data.Modular.Mod Integer))
 #endif
 #ifdef MIN_VERSION_modular
-  , bench "modular" $ nf (show . productNModular) lim
+  , cmp $ bench "modular" $ nf (show . productNModular) lim
 #endif
   ]
   where
+    cmp = bcompare "$NF == \"Data.Mod\" && $(NF-1) == \"Product\""
     lim = 100000000
 
     measure :: (Eq (t P), Num (t P)) => String -> Proxy t -> Benchmark
@@ -118,15 +120,16 @@ benchProduct = bgroup "Product"
 benchInversion :: Benchmark
 benchInversion = bgroup "Inversion"
   [ measure "Data.Mod" (Proxy @Data.Mod.Mod)
-  , measure "Data.Mod.Word" (Proxy @Data.Mod.Word.Mod)
+  , cmp $ measure "Data.Mod.Word" (Proxy @Data.Mod.Word.Mod)
 #ifdef MIN_VERSION_finite_field
-  , measure "finite-field" (Proxy @Data.FiniteField.PrimeField.PrimeField)
+  , cmp $ measure "finite-field" (Proxy @Data.FiniteField.PrimeField.PrimeField)
 #endif
 #ifdef MIN_VERSION_modular_arithmetic
-  , measure "modular-arithmetic" (Proxy @(Data.Modular.Mod Integer))
+  , cmp $ measure "modular-arithmetic" (Proxy @(Data.Modular.Mod Integer))
 #endif
   ]
   where
+    cmp = bcompare "$NF == \"Data.Mod\" && $(NF-1) == \"Inversion\""
     lim = 3000000
 
     measure :: (Eq (t P), Fractional (t P)) => String -> Proxy t -> Benchmark
@@ -143,21 +146,22 @@ benchInversion = bgroup "Inversion"
 benchPower :: Benchmark
 benchPower = bgroup "Power"
   [ measure "Data.Mod" (Proxy @Data.Mod.Mod)
-  , measure "Data.Mod.Word" (Proxy @Data.Mod.Word.Mod)
+  , cmp $ measure "Data.Mod.Word" (Proxy @Data.Mod.Word.Mod)
 #ifdef MIN_VERSION_finite_field
-  , measure "finite-field" (Proxy @Data.FiniteField.PrimeField.PrimeField)
+  , cmp $ measure "finite-field" (Proxy @Data.FiniteField.PrimeField.PrimeField)
 #endif
 #ifdef MIN_VERSION_finite_typelits
-  , measure "finite-typelits" (Proxy @Data.Finite.Finite)
+  , cmp $ measure "finite-typelits" (Proxy @Data.Finite.Finite)
 #endif
 #ifdef MIN_VERSION_modular_arithmetic
-  , measure "modular-arithmetic" (Proxy @(Data.Modular.Mod Integer))
+  , cmp $ measure "modular-arithmetic" (Proxy @(Data.Modular.Mod Integer))
 #endif
 #ifdef MIN_VERSION_modular
-  , bench "modular" $ nf (show . powerNModular) lim
+  , cmp $ bench "modular" $ nf (show . powerNModular) lim
 #endif
   ]
   where
+    cmp = bcompare "$NF == \"Data.Mod\" && $(NF-1) == \"Power\""
     lim = 1000000
 
     measure :: (Eq (t P), Num (t P)) => String -> Proxy t -> Benchmark
