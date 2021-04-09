@@ -80,7 +80,7 @@ benchmark mod-bench
     -- finite-typelits,
     -- modular,
     -- modular-arithmetic,
-    tasty-bench
+    tasty-bench >= 0.2.5
   type: exitcode-stdio-1.0
   main-is: Bench.hs
   default-language: Haskell2010
