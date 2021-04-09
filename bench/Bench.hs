@@ -28,7 +28,7 @@ import qualified Data.Modular
 import qualified Numeric.Modular
 #endif
 
-type P = 1000000007
+type P = 20000003
 
 #ifdef MIN_VERSION_modular
 forceModular :: Numeric.Modular.Mod P -> Numeric.Modular.Mod P
@@ -54,7 +54,7 @@ benchSum = bgroup "Sum"
   ]
   where
     cmp = bcompare "$NF == \"Data.Mod\" && $(NF-1) == \"Sum\""
-    lim = 100000000
+    lim = 20000000
 
     measure :: (Eq (t P), Num (t P)) => String -> Proxy t -> Benchmark
     measure name p = bench name $ whnf (sumN p) lim
@@ -95,7 +95,7 @@ benchProduct = bgroup "Product"
   ]
   where
     cmp = bcompare "$NF == \"Data.Mod\" && $(NF-1) == \"Product\""
-    lim = 100000000
+    lim = 20000000
 
     measure :: (Eq (t P), Num (t P)) => String -> Proxy t -> Benchmark
     measure name p = bench name $ whnf (productN p) lim
@@ -130,7 +130,7 @@ benchInversion = bgroup "Inversion"
   ]
   where
     cmp = bcompare "$NF == \"Data.Mod\" && $(NF-1) == \"Inversion\""
-    lim = 3000000
+    lim = 1500000
 
     measure :: (Eq (t P), Fractional (t P)) => String -> Proxy t -> Benchmark
     measure name p = bench name $ whnf (invertN p) lim
