@@ -34,10 +34,10 @@ import Control.Exception
 import Control.DeepSeq
 import Control.Monad
 import Data.Bits
+import Data.Ratio
 import Data.Word (Word8)
 #ifdef MIN_VERSION_semirings
 import Data.Euclidean (GcdDomain(..), Euclidean(..), Field)
-import Data.Ratio
 import Data.Semiring (Semiring(..), Ring(..))
 #endif
 #ifdef MIN_VERSION_vector
@@ -226,19 +226,6 @@ instance KnownNat m => Ring (Mod m) where
   {-# INLINE negate #-}
 
 -- | See the warning about division above.
-instance KnownNat m => Fractional (Mod m) where
-  fromRational r = case denominator r of
-    1   -> num
-    den -> num / fromInteger den
-    where
-      num = fromInteger (numerator r)
-  {-# INLINE fromRational #-}
-  recip mx = case invertMod mx of
-    Nothing -> throw DivideByZero
-    Just y  -> y
-  {-# INLINE recip #-}
-
--- | See the warning about division above.
 instance KnownNat m => GcdDomain (Mod m) where
   divide x y = Just (x / y)
   gcd        = const $ const 1
@@ -256,6 +243,19 @@ instance KnownNat m => Euclidean (Mod m) where
 instance KnownNat m => Field (Mod m)
 
 #endif
+
+-- | See the warning about division above.
+instance KnownNat m => Fractional (Mod m) where
+  fromRational r = case denominator r of
+    1   -> num
+    den -> num / fromInteger den
+    where
+      num = fromInteger (numerator r)
+  {-# INLINE fromRational #-}
+  recip mx = case invertMod mx of
+    Nothing -> throw DivideByZero
+    Just y  -> y
+  {-# INLINE recip #-}
 
 -- | If an argument is
 -- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
