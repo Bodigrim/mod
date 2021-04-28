@@ -1,0 +1,68 @@
+name: ci
+on:
+  push:
+    branches:
+      - master
+  pull_request: {}
+
+jobs:
+  build:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: true
+      matrix:
+        os: [ubuntu-latest]
+        ghc: ['8.2', '8.4', '8.6', '8.8', '8.10', '9.0']
+        include:
+        - os: windows-latest
+          ghc: 'latest'
+        - os: macOS-latest
+          ghc: 'latest'
+    steps:
+    - uses: actions/checkout@v2
+    - uses: haskell/actions/setup@v1
+      id: setup-haskell-cabal
+      with:
+        ghc-version: ${{ matrix.ghc }}
+        cabal-version: 'latest'
+    - uses: actions/cache@v2.1.5
+      name: Cache cabal stuff
+      with:
+        path: |
+          ${{ steps.setup-haskell-cabal.outputs.cabal-store }}
+          dist-newstyle
+        key: ${{ runner.os }}-${{ matrix.ghc }}-${{ hashFiles('cabal.project.freeze') }}
+        restore-keys: |
+          ${{ runner.os }}-${{ matrix.ghc }}-
+    - name: Build without semirings and vector
+      run: |
+        cabal configure --enable-tests --enable-benchmarks --benchmark-option=-l -f-semirings -f-vector
+        cabal build --write-ghc-environment-files=always
+        cabal test
+        cabal bench
+        cabal haddock
+    - name: Build without vector
+      run: |
+        cabal configure --enable-tests --enable-benchmarks --benchmark-option=-l -fsemirings -f-vector --constraint 'quickcheck-classes -aeson -semigroupoids -unary-laws -vector'
+        cabal build --write-ghc-environment-files=always
+        cabal test
+        cabal bench
+        cabal haddock
+    - name: Build without semirings
+      run: |
+        cabal configure --enable-tests --enable-benchmarks --benchmark-option=-l -f-semirings -fvector --constraint 'quickcheck-classes -aeson -semigroupoids -unary-laws -semirings'
+        cabal build --write-ghc-environment-files=always
+        cabal test
+        cabal bench
+        cabal haddock
+    - name: Build
+      run: |
+        cabal configure --enable-tests --enable-benchmarks --benchmark-option=-l -fsemirings -fvector --constraint 'quickcheck-classes -aeson -semigroupoids -unary-laws'
+        cabal build --write-ghc-environment-files=always
+        cabal test
+        cabal bench
+        cabal haddock
+    - name: Sdist
+      run: |
+        cabal check
+        cabal sdist
