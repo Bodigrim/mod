@@ -267,7 +267,7 @@ powModWordCase = once $ 0 Word.^% n === (0 :: Word.Mod 2)
   where
     n = 1 `shiftL` 64 :: Integer
 
-newtype Huge a = Huge { getHuge :: a }
+newtype Huge a = Huge { _getHuge :: a }
   deriving (Show)
 
 instance (Bits a, Num a, Arbitrary a) => Arbitrary (Huge a) where
