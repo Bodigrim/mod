@@ -38,17 +38,8 @@ import Data.Ratio
 import Data.Euclidean (GcdDomain(..), Euclidean(..), Field)
 import Data.Semiring (Semiring(..), Ring(..))
 #endif
-#ifdef MIN_VERSION_vector
-import Data.Primitive (Prim)
-import qualified Data.Vector.Generic         as G
-import qualified Data.Vector.Generic.Mutable as M
-import qualified Data.Vector.Primitive       as P
-import qualified Data.Vector.Unboxed         as U
-#endif
-import Foreign.Storable (Storable)
 import GHC.Exts
 import GHC.Generics
-import GHC.Integer.GMP.Internals
 import GHC.Natural (Natural(..))
 import GHC.TypeNats (Nat, KnownNat, natVal)
 
@@ -76,11 +67,7 @@ newtype Mod (m :: Nat) = Mod
   -- >>> -1 :: Mod 10
   -- (9 `modulo` 10)
   }
-#ifdef MIN_VERSION_vector
-  deriving (Eq, Ord, Generic, Storable, Prim)
-#else
-  deriving (Eq, Ord, Generic, Storable)
-#endif
+  deriving (Eq, Ord, Generic)
 
 instance NFData (Mod m)
 
@@ -138,24 +125,23 @@ mulMod (NatS# m#) (W# x#) (W# y#) = W# r#
 mulMod NatJ#{} _ _ = tooLargeModulo
 
 fromIntegerMod :: Natural -> Integer -> Word
-fromIntegerMod (NatS# 0##) !_ = throw DivideByZero
-fromIntegerMod (NatS# m#) (S# x#) =
-  if isTrue# (x# >=# 0#)
-    then W# (int2Word# x# `remWord#` m#)
-    else negateMod (NatS# m#) (W# (int2Word# (negateInt# x#) `remWord#` m#))
-fromIntegerMod (NatS# m#) (Jp# x#) =
-  W# (x# `remBigNatWord` m#)
-fromIntegerMod (NatS# m#) (Jn# x#) =
-  negateMod (NatS# m#) (W# (x# `remBigNatWord` m#))
-fromIntegerMod NatJ#{} _ = tooLargeModulo
+fromIntegerMod m x = case toIntegralSized m :: Maybe Word of
+  Nothing -> tooLargeModulo
+  Just{} -> fromInteger $ x `P.mod` toInteger m
 
 #ifdef MIN_VERSION_semirings
 
 fromNaturalMod :: Natural -> Natural -> Word
-fromNaturalMod (NatS# 0##) !_ = throw DivideByZero
-fromNaturalMod (NatS# m#) (NatS# x#) = W# (x# `remWord#` m#)
-fromNaturalMod (NatS# m#) (NatJ# x#) = W# (x# `remBigNatWord` m#)
-fromNaturalMod NatJ#{} _ = tooLargeModulo
+fromNaturalMod m x = case toIntegralSized m :: Maybe Word of
+  Nothing -> tooLargeModulo
+  Just{} -> fromIntegral' $ x `P.rem` m
+  where
+#if __GLASGOW_HASKELL__ == 900 && __GLASGOW_HASKELL_PATCHLEVEL1__ == 1
+    -- Cannot use fromIntegral because of https://gitlab.haskell.org/ghc/ghc/-/issues/19411
+    fromIntegral' = fromInteger . toInteger
+#else
+    fromIntegral' = fromIntegral
+#endif
 
 #endif
 
@@ -382,54 +368,3 @@ mx@(Mod (W# x#)) ^% a = case natVal mx of
 "powMod/3/Word"        forall x. x ^% (3 :: Word)    = let u = x in u*u*u #-}
 
 infixr 8 ^%
-
-#ifdef MIN_VERSION_vector
-
-newtype instance U.MVector s (Mod m) = MV_Mod (P.MVector s Word)
-newtype instance U.Vector    (Mod m) = V_Mod  (P.Vector    Word)
-
-instance U.Unbox (Mod m)
-
-instance M.MVector U.MVector (Mod m) where
-  {-# INLINE basicLength #-}
-  {-# INLINE basicUnsafeSlice #-}
-  {-# INLINE basicOverlaps #-}
-  {-# INLINE basicUnsafeNew #-}
-  {-# INLINE basicInitialize #-}
-  {-# INLINE basicUnsafeReplicate #-}
-  {-# INLINE basicUnsafeRead #-}
-  {-# INLINE basicUnsafeWrite #-}
-  {-# INLINE basicClear #-}
-  {-# INLINE basicSet #-}
-  {-# INLINE basicUnsafeCopy #-}
-  {-# INLINE basicUnsafeGrow #-}
-  basicLength (MV_Mod v) = M.basicLength v
-  basicUnsafeSlice i n (MV_Mod v) = MV_Mod $ M.basicUnsafeSlice i n v
-  basicOverlaps (MV_Mod v1) (MV_Mod v2) = M.basicOverlaps v1 v2
-  basicUnsafeNew n = MV_Mod <$> M.basicUnsafeNew n
-  basicInitialize (MV_Mod v) = M.basicInitialize v
-  basicUnsafeReplicate n x = MV_Mod <$> M.basicUnsafeReplicate n (unMod x)
-  basicUnsafeRead (MV_Mod v) i = Mod <$> M.basicUnsafeRead v i
-  basicUnsafeWrite (MV_Mod v) i x = M.basicUnsafeWrite v i (unMod x)
-  basicClear (MV_Mod v) = M.basicClear v
-  basicSet (MV_Mod v) x = M.basicSet v (unMod x)
-  basicUnsafeCopy (MV_Mod v1) (MV_Mod v2) = M.basicUnsafeCopy v1 v2
-  basicUnsafeMove (MV_Mod v1) (MV_Mod v2) = M.basicUnsafeMove v1 v2
-  basicUnsafeGrow (MV_Mod v) n = MV_Mod <$> M.basicUnsafeGrow v n
-
-instance G.Vector U.Vector (Mod m) where
-  {-# INLINE basicUnsafeFreeze #-}
-  {-# INLINE basicUnsafeThaw #-}
-  {-# INLINE basicLength #-}
-  {-# INLINE basicUnsafeSlice #-}
-  {-# INLINE basicUnsafeIndexM #-}
-  {-# INLINE elemseq #-}
-  basicUnsafeFreeze (MV_Mod v) = V_Mod <$> G.basicUnsafeFreeze v
-  basicUnsafeThaw (V_Mod v) = MV_Mod <$> G.basicUnsafeThaw v
-  basicLength (V_Mod v) = G.basicLength v
-  basicUnsafeSlice i n (V_Mod v) = V_Mod $ G.basicUnsafeSlice i n v
-  basicUnsafeIndexM (V_Mod v) i = Mod <$> G.basicUnsafeIndexM v i
-  basicUnsafeCopy (MV_Mod mv) (V_Mod v) = G.basicUnsafeCopy mv v
-  elemseq _ = seq
-
-#endif

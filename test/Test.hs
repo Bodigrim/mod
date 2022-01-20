@@ -12,7 +12,6 @@ import Data.Mod
 import qualified Data.Mod.Word as Word
 import Data.Proxy
 import Data.Semigroup
-import Foreign.Storable (Storable(..))
 import GHC.TypeNats (KnownNat, SomeNat(..), natVal, someNatVal)
 import Test.Tasty
 import Test.Tasty.QuickCheck
@@ -21,12 +20,6 @@ import Test.QuickCheck.Classes.Base
 #ifdef MIN_VERSION_semirings
 import Data.Semiring (Ring)
 import Test.QuickCheck.Classes (semiringLaws, ringLaws)
-#endif
-
-#ifdef MIN_VERSION_vector
-import Data.Primitive (Prim)
-import Data.Vector.Unboxed (Unbox)
-import Test.QuickCheck.Classes (muvectorLaws, primLaws)
 #endif
 
 main :: IO ()
@@ -102,46 +95,25 @@ main = defaultMain $ testGroup "All"
   ]
 
 #ifdef MIN_VERSION_semirings
-#ifdef MIN_VERSION_vector
-laws1 :: (Eq a, Ord a, Show a, Num a, Storable a, Ring a, Prim a, Unbox a, Arbitrary a) => Proxy a -> [Laws]
+laws1 :: (Eq a, Ord a, Show a, Num a, Ring a, Arbitrary a) => Proxy a -> [Laws]
 #else
-laws1 :: (Eq a, Ord a, Show a, Num a, Storable a, Ring a, Arbitrary a) => Proxy a -> [Laws]
-#endif
-#else
-#ifdef MIN_VERSION_vector
-laws1 :: (Eq a, Ord a, Show a, Num a, Storable a, Prim a, Unbox a, Arbitrary a) => Proxy a -> [Laws]
-#else
-laws1 :: (Eq a, Ord a, Show a, Num a, Storable a, Arbitrary a) => Proxy a -> [Laws]
-#endif
+laws1 :: (Eq a, Ord a, Show a, Num a, Arbitrary a) => Proxy a -> [Laws]
 #endif
 laws1 p =
     [ eqLaws          p
     , ordLaws         p
     , numLaws         p
     , showLaws        p
-    , storableLaws    p
 #ifdef MIN_VERSION_semirings
     , semiringLaws    p
     , ringLaws        p
 #endif
-#ifdef MIN_VERSION_vector
-    , primLaws        p
-    , muvectorLaws    p
-#endif
     ]
 
 #ifdef MIN_VERSION_semirings
-#ifdef MIN_VERSION_vector
-laws :: (Eq a, Ord a, Show a, Num a, Storable a, Ring a, Enum a, Bounded a, Prim a, Unbox a, Arbitrary a) => Proxy a -> [Laws]
+laws :: (Eq a, Ord a, Show a, Num a, Ring a, Enum a, Bounded a, Arbitrary a) => Proxy a -> [Laws]
 #else
-laws :: (Eq a, Ord a, Show a, Num a, Storable a, Ring a, Enum a, Bounded a, Arbitrary a) => Proxy a -> [Laws]
-#endif
-#else
-#ifdef MIN_VERSION_vector
-laws :: (Eq a, Ord a, Show a, Num a, Storable a, Enum a, Bounded a, Prim a, Unbox a, Arbitrary a) => Proxy a -> [Laws]
-#else
-laws :: (Eq a, Ord a, Show a, Num a, Storable a, Enum a, Bounded a, Arbitrary a) => Proxy a -> [Laws]
-#endif
+laws :: (Eq a, Ord a, Show a, Num a, Enum a, Bounded a, Arbitrary a) => Proxy a -> [Laws]
 #endif
 laws p = boundedEnumLaws p : laws1 p
 
