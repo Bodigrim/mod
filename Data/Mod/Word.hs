@@ -1,6 +1,6 @@
 -- |
 -- Module:      Data.Mod.Word
--- Copyright:   (c) 2017-2020 Andrew Lelechenko
+-- Copyright:   (c) 2017-2022 Andrew Lelechenko
 -- Licence:     MIT
 -- Maintainer:  Andrew Lelechenko <andrew.lelechenko@gmail.com>
 --
