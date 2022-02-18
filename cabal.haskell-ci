@@ -1,0 +1,14 @@
+constraint-set no-semirings
+  constraints: mod -semirings
+  tests: True
+  run-tests: True
+
+constraint-set no-vector
+  constraints: mod -vector
+  tests: True
+  run-tests: True
+
+constraint-set no-vector-no-semirings
+  constraints: mod -semirings -vector
+  tests: True
+  run-tests: True
