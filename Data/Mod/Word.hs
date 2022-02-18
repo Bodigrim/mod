@@ -337,8 +337,6 @@ half x = x `shiftR` 1
 -- Negative powers are allowed, but may throw 'DivideByZero', if an argument
 -- is not <https://en.wikipedia.org/wiki/Coprime_integers coprime> with the modulo.
 --
--- Building with @-O@ triggers a rewrite rule 'Prelude.^' = '^%'.
---
 -- >>> :set -XDataKinds
 -- >>> 3 ^% 4 :: Mod 10    -- 3 ^ 4 = 81 ≡ 1 (mod 10)
 -- (1 `modulo` 10)
@@ -372,8 +370,6 @@ mx@(Mod (W# x#)) ^% a = case natVal mx of
   KnownNat m => Mod m -> Word    -> Mod m #-}
 
 {-# RULES
-"powMod"               forall (x :: KnownNat m => Mod m) p. x ^ p = x ^% p
-
 "powMod/2/Integer"     forall x. x ^% (2 :: Integer) = let u = x in u*u
 "powMod/3/Integer"     forall x. x ^% (3 :: Integer) = let u = x in u*u*u
 "powMod/2/Int"         forall x. x ^% (2 :: Int)     = let u = x in u*u
