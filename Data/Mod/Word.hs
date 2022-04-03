@@ -78,14 +78,12 @@ newtype Mod (m :: Nat) = Mod
   -- (9 `modulo` 10)
   }
 #ifdef MIN_VERSION_vector
-  deriving (Eq, Ord, Generic, Storable, Prim)
+  deriving (Eq, Hashable, Ord, Generic, Storable, Prim)
 #else
-  deriving (Eq, Ord, Generic, Storable)
+  deriving (Eq, Hashable, Ord, Generic, Storable)
 #endif
 
 instance NFData (Mod m)
-
-instance Hashable (Mod m)
 
 instance KnownNat m => Show (Mod m) where
   show m = "(" ++ show (unMod m) ++ " `modulo` " ++ show (natVal m) ++ ")"
