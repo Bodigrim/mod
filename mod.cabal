@@ -36,6 +36,7 @@ library
   build-depends:
     base >=4.10 && <5,
     deepseq,
+    hashable,
     integer-gmp <1.2
   if flag(semirings)
     build-depends:

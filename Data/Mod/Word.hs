@@ -33,6 +33,7 @@ import Prelude as P hiding (even)
 import Control.Exception
 import Control.DeepSeq
 import Data.Bits
+import Data.Hashable
 import Data.Ratio
 #ifdef MIN_VERSION_semirings
 import Data.Euclidean (GcdDomain(..), Euclidean(..), Field)
@@ -83,6 +84,8 @@ newtype Mod (m :: Nat) = Mod
 #endif
 
 instance NFData (Mod m)
+
+instance Hashable (Mod m)
 
 instance KnownNat m => Show (Mod m) where
   show m = "(" ++ show (unMod m) ++ " `modulo` " ++ show (natVal m) ++ ")"
