@@ -6,10 +6,10 @@
 --
 -- <https://en.wikipedia.org/wiki/Modular_arithmetic Modular arithmetic>,
 -- promoting moduli to the type level, with an emphasis on performance.
--- Originally part of <https://hackage.haskell.org/package/arithmoi arithmoi> package.
+-- Originally part of the <https://hackage.haskell.org/package/arithmoi arithmoi> package.
 --
 -- This module supports only moduli, which fit into 'Word'.
--- Use (slower) "Data.Mod" to handle arbitrary-sized moduli.
+-- Use the (slower) "Data.Mod" module for handling arbitrary-sized moduli.
 
 {-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP                        #-}
@@ -56,21 +56,21 @@ import GHC.TypeNats (Nat, KnownNat, natVal)
 -- <https://en.wikipedia.org/wiki/Modular_arithmetic#Integers_modulo_n integers modulo m>,
 -- equipped with useful instances.
 --
--- For example, 3 :: 'Mod' 10 stands for the class of integers
--- congruent to \( 3 \bmod 10 \colon \ldots {−17}, −7, 3, 13, 23 \ldots \)
+-- For example, @3 :: 'Mod' 10@ stands for the class of integers
+-- congruent to \( 3 \bmod 10 \colon \ldots, −17, −7, 3, 13, 23, \ldots \)
 --
 -- >>> :set -XDataKinds
 -- >>> 3 + 8 :: Mod 10 -- 3 + 8 = 11 ≡ 1 (mod 10)
 -- (1 `modulo` 10)
 --
--- __Warning:__ division by residue, which is not
+-- __Warning:__ division by a residue, which is not
 -- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
--- with the modulo, throws 'DivideByZero'.
+-- with the modulus, throws 'DivideByZero'.
 -- Consider using 'invertMod' for non-prime moduli.
 newtype Mod (m :: Nat) = Mod
   { unMod :: Word
   -- ^ The canonical representative of the residue class,
-  -- always between 0 and \( m - 1 \) inclusively.
+  -- always between 0 and \( m - 1 \) (inclusively).
   --
   -- >>> :set -XDataKinds
   -- >>> -1 :: Mod 10
@@ -116,26 +116,26 @@ addMod (NatS# m#) (W# x#) (W# y#) =
   if isTrue# c# || isTrue# (z# `geWord#` m#) then W# (z# `minusWord#` m#) else W# z#
   where
     !(# z#, c# #) = x# `addWordC#` y#
-addMod NatJ#{} _ _ = tooLargeModulo
+addMod NatJ#{} _ _ = tooLargeModulus
 
 subMod :: Natural -> Word -> Word -> Word
 subMod (NatS# m#) (W# x#) (W# y#) =
   if isTrue# (x# `geWord#` y#) then W# z# else W# (z# `plusWord#` m#)
   where
     z# = x# `minusWord#` y#
-subMod NatJ#{} _ _ = tooLargeModulo
+subMod NatJ#{} _ _ = tooLargeModulus
 
 negateMod :: Natural -> Word -> Word
 negateMod _ (W# 0##) = W# 0##
 negateMod (NatS# m#) (W# x#) = W# (m# `minusWord#` x#)
-negateMod NatJ#{} _ = tooLargeModulo
+negateMod NatJ#{} _ = tooLargeModulus
 
 mulMod :: Natural -> Word -> Word -> Word
 mulMod (NatS# m#) (W# x#) (W# y#) = W# r#
   where
     !(# z1#, z2# #) = timesWord2# x# y#
     !(# _, r# #) = quotRemWord2# z1# z2# m#
-mulMod NatJ#{} _ _ = tooLargeModulo
+mulMod NatJ#{} _ _ = tooLargeModulus
 
 fromIntegerMod :: Natural -> Integer -> Word
 fromIntegerMod (NatS# 0##) !_ = throw DivideByZero
@@ -147,7 +147,7 @@ fromIntegerMod (NatS# m#) (Jp# x#) =
   W# (x# `remBigNatWord` m#)
 fromIntegerMod (NatS# m#) (Jn# x#) =
   negateMod (NatS# m#) (W# (x# `remBigNatWord` m#))
-fromIntegerMod NatJ#{} _ = tooLargeModulo
+fromIntegerMod NatJ#{} _ = tooLargeModulus
 
 #ifdef MIN_VERSION_semirings
 
@@ -155,12 +155,12 @@ fromNaturalMod :: Natural -> Natural -> Word
 fromNaturalMod (NatS# 0##) !_ = throw DivideByZero
 fromNaturalMod (NatS# m#) (NatS# x#) = W# (x# `remWord#` m#)
 fromNaturalMod (NatS# m#) (NatJ# x#) = W# (x# `remBigNatWord` m#)
-fromNaturalMod NatJ#{} _ = tooLargeModulo
+fromNaturalMod NatJ#{} _ = tooLargeModulus
 
 #endif
 
-tooLargeModulo :: a
-tooLargeModulo = error "modulo does not fit into a machine word"
+tooLargeModulus :: a
+tooLargeModulus = error "modulus does not fit into a machine word"
 
 instance KnownNat m => Num (Mod m) where
   mx@(Mod !x) + (Mod !y) = Mod $ addMod (natVal mx) x y
@@ -238,7 +238,7 @@ instance KnownNat m => Fractional (Mod m) where
 
 -- | If an argument is
 -- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
--- with the modulo, return its modular inverse.
+-- with the modulus, return its modular inverse.
 -- Otherwise return 'Nothing'.
 --
 -- >>> :set -XDataKinds
@@ -248,7 +248,7 @@ instance KnownNat m => Fractional (Mod m) where
 -- Nothing
 invertMod :: KnownNat m => Mod m -> Maybe (Mod m)
 invertMod mx@(Mod x) = case natVal mx of
-  NatJ#{}   -> tooLargeModulo
+  NatJ#{}   -> tooLargeModulus
   NatS# 0## -> Nothing
   NatS# m#  -> Mod <$> invertModWord x (W# m#)
 
@@ -335,7 +335,7 @@ half x = x `shiftR` 1
 
 -- | Drop-in replacement for 'Prelude.^' with a bit better performance.
 -- Negative powers are allowed, but may throw 'DivideByZero', if an argument
--- is not <https://en.wikipedia.org/wiki/Coprime_integers coprime> with the modulo.
+-- is not <https://en.wikipedia.org/wiki/Coprime_integers coprime> with the modulus.
 --
 -- >>> :set -XDataKinds
 -- >>> 3 ^% 4 :: Mod 10    -- 3 ^ 4 = 81 ≡ 1 (mod 10)
@@ -346,7 +346,7 @@ half x = x `shiftR` 1
 -- (*** Exception: divide by zero
 (^%) :: (KnownNat m, Integral a) => Mod m -> a -> Mod m
 mx@(Mod (W# x#)) ^% a = case natVal mx of
-  NatJ#{} -> tooLargeModulo
+  NatJ#{} -> tooLargeModulus
   NatS# m#
     | a < 0 -> case invertMod mx of
       Nothing            -> throw DivideByZero
