@@ -38,7 +38,7 @@ in terms of performance. Here is a brief comparison:
   All competing implementations of
   the modular addition involve divisions, while `mod` completely avoids
   this costly operation. This makes a difference even for small numbers;
-  e.g., `sum [1..10^7]` becomes 5x faster. For larger integers the speed up
+  e. g., `sum [1..10^7]` becomes 5x faster. For larger integers the speed up
   is even more significant, because the computational complexity of division is not linear.
 
 * __Small `(*)`.__
@@ -62,7 +62,7 @@ in terms of performance. Here is a brief comparison:
 * __Overflows.__
   At first glance `modular-arithmetic` is more flexible than `mod`,
   because it allows to specify the underlying representation of a modular residue,
-  e.g., `Mod Integer 100`, `Mod Int 100`, `Mod Word8 100`. We argue that this is
+  e. g., `Mod Integer 100`, `Mod Int 100`, `Mod Word8 100`. We argue that this is
   a dangerous freedom, vulnerable to overflows.
   For instance, `20 ^ 2 :: Mod Word8 100` returns `44` instead of the expected `0`.
   Even less expected is that `50 :: Mod Word8 300` appears to be `6`
