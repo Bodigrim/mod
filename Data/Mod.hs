@@ -6,7 +6,7 @@
 --
 -- <https://en.wikipedia.org/wiki/Modular_arithmetic Modular arithmetic>,
 -- promoting moduli to the type level, with an emphasis on performance.
--- Originally part of <https://hackage.haskell.org/package/arithmoi arithmoi> package.
+-- Originally part of the <https://hackage.haskell.org/package/arithmoi arithmoi> package.
 --
 -- This module supports moduli of arbitrary size.
 -- Use "Data.Mod.Word" to achieve better performance,
@@ -69,14 +69,14 @@ import GHC.TypeNats (Nat, KnownNat, natVal, natVal')
 -- >>> 3 + 8 :: Mod 10 -- 3 + 8 = 11 ≡ 1 (mod 10)
 -- (1 `modulo` 10)
 --
--- __Warning:__ division by residue, which is not
+-- __Warning:__ division by a residue, which is not
 -- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
--- with the modulo, throws 'DivideByZero'.
+-- with the modulus, throws 'DivideByZero'.
 -- Consider using 'invertMod' for non-prime moduli.
 newtype Mod (m :: Nat) = Mod
   { unMod :: Natural
   -- ^ The canonical representative of the residue class,
-  -- always between 0 and \( m - 1 \) inclusively.
+  -- always between 0 and \( m - 1 \) (inclusively).
   --
   -- >>> :set -XDataKinds
   -- >>> -1 :: Mod 10
@@ -181,7 +181,7 @@ mulMod (NatJ# m#) (NatJ# x#) (NatJ# y#) =
   bigNatToNat $ (x# `timesBigNat` y#) `remBigNat` m#
 
 brokenInvariant :: a
-brokenInvariant = error "argument is larger than modulo"
+brokenInvariant = error "argument is larger than modulus"
 
 instance KnownNat m => Num (Mod m) where
   mx@(Mod !x) + (Mod !y) = Mod $ addMod (natVal mx) x y
@@ -259,7 +259,7 @@ instance KnownNat m => Fractional (Mod m) where
 
 -- | If an argument is
 -- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
--- with the modulo, return its modular inverse.
+-- with the modulus, return its modular inverse.
 -- Otherwise return 'Nothing'.
 --
 -- >>> :set -XDataKinds
@@ -278,7 +278,7 @@ invertMod mx
 
 -- | Drop-in replacement for 'Prelude.^' with much better performance.
 -- Negative powers are allowed, but may throw 'DivideByZero', if an argument
--- is not <https://en.wikipedia.org/wiki/Coprime_integers coprime> with the modulo.
+-- is not <https://en.wikipedia.org/wiki/Coprime_integers coprime> with the modulus.
 --
 -- >>> :set -XDataKinds
 -- >>> 3 ^% 4 :: Mod 10    -- 3 ^ 4 = 81 ≡ 1 (mod 10)
@@ -420,7 +420,7 @@ instance KnownNat m => P.Prim (Mod m) where
   writeByteArray# marr !i' !(Mod x) token = case natVal' (proxy# :: Proxy# m) of
     NatS#{} -> case x of
       NatS# x# -> P.writeByteArray# marr i' (W# x#) token
-      _        -> error "argument is larger than modulo"
+      _        -> error "argument is larger than modulus"
     NatJ# m# -> case x of
       NatS# x# -> case P.writeByteArray# marr i# (W# x#) token of
         newToken -> P.setByteArray# marr (i# +# 1#) (sz# -# 1#) (0 :: Word) newToken
@@ -435,7 +435,7 @@ instance KnownNat m => P.Prim (Mod m) where
   writeOffAddr# marr !i' !(Mod x) token = case natVal' (proxy# :: Proxy# m) of
     NatS#{} -> case x of
       NatS# x# -> P.writeOffAddr# marr i' (W# x#) token
-      _        -> error "argument is larger than modulo"
+      _        -> error "argument is larger than modulus"
     NatJ# m# -> case x of
       NatS# x# -> case P.writeOffAddr# marr i# (W# x#) token of
         newToken -> P.setOffAddr# marr (i# +# 1#) (sz# -# 1#) (0 :: Word) newToken
@@ -451,7 +451,7 @@ instance KnownNat m => P.Prim (Mod m) where
   setByteArray# marr off len mx@(Mod x) token = case natVal' (proxy# :: Proxy# m) of
     NatS#{} -> case x of
       NatS# x# -> P.setByteArray# marr off len (W# x#) token
-      _        -> error "argument is larger than modulo"
+      _        -> error "argument is larger than modulus"
     NatJ# m# -> case P.writeByteArray# marr off mx token of
       newToken -> doSet (sz `iShiftL#` lgWordSize#) newToken
       where
@@ -469,7 +469,7 @@ instance KnownNat m => P.Prim (Mod m) where
   setOffAddr# marr off len mx@(Mod x) token = case natVal' (proxy# :: Proxy# m) of
     NatS#{} -> case x of
       NatS# x# -> P.setOffAddr# marr off len (W# x#) token
-      _        -> error "argument is larger than modulo"
+      _        -> error "argument is larger than modulus"
     NatJ# m# -> case P.writeOffAddr# marr off mx token of
       newToken -> doSet (sz `iShiftL#` lgWordSize#) newToken
       where
@@ -485,12 +485,12 @@ instance KnownNat m => P.Prim (Mod m) where
   {-# INLINE setOffAddr# #-}
 
 -- | Unboxed vectors of 'Mod' cause more nursery allocations
--- than boxed ones, but reduce pressure on garbage collector,
+-- than boxed ones, but reduce pressure on the garbage collector,
 -- especially for large vectors.
 newtype instance U.MVector s (Mod m) = ModMVec (P.MVector s (Mod m))
 
 -- | Unboxed vectors of 'Mod' cause more nursery allocations
--- than boxed ones, but reduce pressure on garbage collector,
+-- than boxed ones, but reduce pressure on the garbage collector,
 -- especially for large vectors.
 newtype instance U.Vector    (Mod m) = ModVec  (P.Vector (Mod m))
 

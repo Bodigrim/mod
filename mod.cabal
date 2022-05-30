@@ -12,7 +12,7 @@ synopsis:      Fast type-safe modular arithmetic
 description:
   <https://en.wikipedia.org/wiki/Modular_arithmetic Modular arithmetic>,
   promoting moduli to the type level, with an emphasis on performance.
-  Originally part of <https://hackage.haskell.org/package/arithmoi arithmoi> package.
+  Originally part of the <https://hackage.haskell.org/package/arithmoi arithmoi> package.
 category:      Math, Number Theory
 author:        Andrew Lelechenko <andrew.lelechenko@gmail.com>
 tested-with:   GHC ==8.2.2 GHC ==8.4.4 GHC ==8.6.5 GHC ==8.8.3 GHC ==8.10.7 GHC ==9.0.2 GHC ==9.2.1
