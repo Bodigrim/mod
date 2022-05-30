@@ -63,7 +63,7 @@ import GHC.TypeNats (Nat, KnownNat, natVal, natVal')
 -- equipped with useful instances.
 --
 -- For example, 3 :: 'Mod' 10 stands for the class of integers
--- congruent to \( 3 \bmod 10 \colon \ldots −17, −7, 3, 13, 23 \ldots \)
+-- congruent to \( 3 \bmod 10 \colon \ldots {}−17, −7, 3, 13, 23 \ldots \)
 --
 -- >>> :set -XDataKinds
 -- >>> 3 + 8 :: Mod 10 -- 3 + 8 = 11 ≡ 1 (mod 10)
