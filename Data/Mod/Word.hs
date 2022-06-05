@@ -221,7 +221,7 @@ instance KnownNat m => Ring (Mod m) where
 -- with the modulus, throws 'DivideByZero'.
 -- Consider using 'invertMod' for non-prime moduli.
 instance KnownNat m => GcdDomain (Mod m) where
-  divide x y = Just (x / y)
+  divide x y = Just $! x / y
   gcd        = const $ const 1
   lcm        = const $ const 1
   coprime    = const $ const True
@@ -232,7 +232,10 @@ instance KnownNat m => GcdDomain (Mod m) where
 -- Consider using 'invertMod' for non-prime moduli.
 instance KnownNat m => Euclidean (Mod m) where
   degree      = const 0
-  quotRem x y = (x / y, 0)
+  quotRem x y =
+    let !q = x / y
+        !z = 0
+    in (q, z)
   quot        = (/)
   rem         = const $ const 0
 
@@ -271,14 +274,14 @@ instance KnownNat m => Fractional (Mod m) where
 -- >>> invertMod 4 :: Mod 10 -- 4 and 10 are not coprime
 -- Nothing
 invertMod :: KnownNat m => Mod m -> Maybe (Mod m)
-invertMod mx@(Mod x) = case natVal mx of
+invertMod mx@(Mod !x) = case natVal mx of
   NatJ#{}   -> tooLargeModulus
   NatS# 0## -> Nothing
   NatS# m#  -> Mod <$> invertModWord x (W# m#)
 
 invertModWord :: Word -> Word -> Maybe Word
 invertModWord x m@(W# m#)
-  -- If both x and k are even, no inverse exists
+  -- If both x and m are even, no inverse exists
   | even x, isTrue# (k# `gtWord#` 0##) = Nothing
   | otherwise = case invertModWordOdd x m' of
     Nothing -> Nothing
@@ -369,22 +372,16 @@ half x = x `shiftR` 1
 -- >>> 4 ^% (-1) :: Mod 10 -- 4 and 10 are not coprime
 -- (*** Exception: divide by zero
 (^%) :: (KnownNat m, Integral a) => Mod m -> a -> Mod m
-mx@(Mod (W# x#)) ^% a = case natVal mx of
+mx@(Mod !x) ^% a = case natVal mx of
   NatJ#{} -> tooLargeModulus
-  NatS# m#
+  m@(NatS# _)
     | a < 0 -> case invertMod mx of
-      Nothing            -> throw DivideByZero
-      Just (Mod (W# y#)) -> Mod $ W# (f y# (- a) 1##)
-    | otherwise          -> Mod $ W# (f x# a 1##)
+      Nothing      -> throw DivideByZero
+      Just (Mod y) -> Mod $ f y (-a) 1
+    | otherwise    -> Mod $ f x a 1
     where
-      f :: Integral a => Word# -> a -> Word# -> Word#
-      f _  0 acc# = acc#
-      f b# e acc# = f bb# (e `P.quot` 2) (if odd e then ba# else acc#)
-        where
-          !(# bb1#, bb2# #) = timesWord2# b# b#
-          !(#    _, bb#  #) = quotRemWord2# bb1# bb2# m#
-          !(# ba1#, ba2# #) = timesWord2# b# acc#
-          !(#    _, ba#  #) = quotRemWord2# ba1# ba2# m#
+      f !_ 0 acc = acc
+      f b  e acc = f (mulMod m b b) (e `P.quot` 2) (if odd e then mulMod m b acc else acc)
 {-# INLINABLE [1] (^%) #-}
 
 {-# SPECIALISE [1] (^%) ::
