@@ -20,7 +20,9 @@ import Test.Tasty.QuickCheck
 import Test.QuickCheck.Classes.Base
 
 #ifdef MIN_VERSION_semirings
+import qualified Data.Euclidean as E
 import Data.Semiring (Ring, Semiring(..))
+import qualified Data.Set as S
 import Test.QuickCheck.Classes (semiringLaws, ringLaws)
 #endif
 
@@ -66,6 +68,12 @@ main = defaultMain $ testGroup "All"
     , testProperty "powMod"      powModRandomProp
     , testProperty "powMod on sum" powModRandomAdditiveProp
     , testProperty "powMod special case" powModCase
+#ifdef MIN_VERSION_semirings
+    , testProperty "divide"  divideIsInvertModRandom
+    , testProperty "gcd"     gcdIsPrincipalIdealRandom
+    , testProperty "lcm"     lcmIsIntersectionOfIdealsRandom
+    , testProperty "coprime" coprimeGeneratorsRandom
+#endif
     ]
   , testGroup "Mod 0"
     [ testProperty "0"            (isDivideByZero 0)
@@ -312,3 +320,46 @@ isDivideByZero x = ioProperty ((=== Left DivideByZero) <$> try (evaluate x))
 
 isDivideByZeroWord :: Word.Mod 0 -> Property
 isDivideByZeroWord x = ioProperty ((=== Left DivideByZero) <$> try (evaluate x))
+
+-------------------------------------------------------------------------------
+-- Ideals
+
+#ifdef MIN_VERSION_semirings
+
+divideIsInvertModRandom :: Positive Integer -> Integer -> Integer -> Property
+divideIsInvertModRandom (Positive m) x y = case someNatVal (fromInteger m) of
+  SomeNat (Proxy :: Proxy m) -> divideIsInvertMod (fromInteger x :: Mod m) (fromInteger y)
+
+divideIsInvertMod :: KnownNat m => Mod m -> Mod m -> Property
+divideIsInvertMod x y = E.divide x y === ((* x) <$> invertMod y)
+
+gcdIsPrincipalIdealRandom :: Positive (Small Integer) -> Integer -> Integer -> Property
+gcdIsPrincipalIdealRandom (Positive (Small m)) x y = case someNatVal (fromInteger m) of
+  SomeNat (Proxy :: Proxy m) -> gcdIsPrincipalIdeal (fromInteger x :: Mod m) (fromInteger y)
+
+gcdIsPrincipalIdeal :: KnownNat m => Mod m -> Mod m -> Property
+gcdIsPrincipalIdeal x y = addIdeals (genIdeal x) (genIdeal y) === genIdeal (E.gcd x y)
+  where
+    genIdeal t = S.fromList $ map (* t) [minBound .. maxBound]
+    addIdeals us vs = S.fromList [ u + v | u <- S.toList us, v <- S.toList vs ]
+
+lcmIsIntersectionOfIdealsRandom :: Positive (Small Integer) -> Integer -> Integer -> Property
+lcmIsIntersectionOfIdealsRandom (Positive (Small m)) x y = case someNatVal (fromInteger m) of
+  SomeNat (Proxy :: Proxy m) -> lcmIsIntersectionOfIdeals (fromInteger x :: Mod m) (fromInteger y)
+
+lcmIsIntersectionOfIdeals :: KnownNat m => Mod m -> Mod m -> Property
+lcmIsIntersectionOfIdeals x y = S.intersection (genIdeal x) (genIdeal y) === genIdeal (E.lcm x y)
+  where
+    genIdeal t = S.fromList $ map (* t) [minBound .. maxBound]
+
+coprimeGeneratorsRandom :: Positive (Small Integer) -> Integer -> Integer -> Property
+coprimeGeneratorsRandom (Positive (Small m)) x y = case someNatVal (fromInteger m) of
+  SomeNat (Proxy :: Proxy m) -> coprimeGenerators (fromInteger x :: Mod m) (fromInteger y)
+
+coprimeGenerators :: KnownNat m => Mod m -> Mod m -> Property
+coprimeGenerators x y = E.coprime x y === (addIdeals (genIdeal x) (genIdeal y) == S.fromList [minBound .. maxBound])
+  where
+    genIdeal t = S.fromList $ map (* t) [minBound .. maxBound]
+    addIdeals us vs = S.fromList [ u + v | u <- S.toList us, v <- S.toList vs ]
+
+#endif

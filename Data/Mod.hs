@@ -232,15 +232,19 @@ instance KnownNat m => Ring (Mod m) where
   negate = Prelude.negate
   {-# INLINE negate #-}
 
--- | Division by a residue, which is not
--- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
--- with the modulus, throws 'DivideByZero'.
--- Consider using 'invertMod' for non-prime moduli.
 instance KnownNat m => GcdDomain (Mod m) where
-  divide x y = Just (x / y)
-  gcd        = const $ const 1
-  lcm        = const $ const 1
-  coprime    = const $ const True
+  divide x y = case invertMod y of
+    Nothing -> Nothing
+    Just z  -> Just (x * z)
+  gcd (Mod x) (Mod y) = g
+    where
+      m = natVal g
+      g = Mod $ if m > 1 then Prelude.gcd (Prelude.gcd m x) y else 0
+  lcm (Mod x) (Mod y) = l
+    where
+      m = natVal l
+      l = Mod $ if m > 1 then Prelude.lcm (Prelude.gcd m x) (Prelude.gcd m y) else 0
+  coprime x y = Data.Euclidean.gcd x y == 1
 
 -- | Division by a residue, which is not
 -- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
