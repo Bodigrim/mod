@@ -69,10 +69,6 @@ import GHC.TypeNats (Nat, KnownNat, natVal, natVal')
 -- >>> 3 + 8 :: Mod 10 -- 3 + 8 = 11 ≡ 1 (mod 10)
 -- (1 `modulo` 10)
 --
--- __Warning:__ division by a residue, which is not
--- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
--- with the modulus, throws 'DivideByZero'.
--- Consider using 'invertMod' for non-prime moduli.
 newtype Mod (m :: Nat) = Mod
   { unMod :: Natural
   -- ^ The canonical representative of the residue class,
@@ -236,26 +232,38 @@ instance KnownNat m => Ring (Mod m) where
   negate = Prelude.negate
   {-# INLINE negate #-}
 
--- | See the warning about division above.
+-- | Division by a residue, which is not
+-- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
+-- with the modulus, throws 'DivideByZero'.
+-- Consider using 'invertMod' for non-prime moduli.
 instance KnownNat m => GcdDomain (Mod m) where
   divide x y = Just (x / y)
   gcd        = const $ const 1
   lcm        = const $ const 1
   coprime    = const $ const True
 
--- | See the warning about division above.
+-- | Division by a residue, which is not
+-- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
+-- with the modulus, throws 'DivideByZero'.
+-- Consider using 'invertMod' for non-prime moduli.
 instance KnownNat m => Euclidean (Mod m) where
   degree      = const 0
   quotRem x y = (x / y, 0)
   quot        = (/)
   rem         = const $ const 0
 
--- | See the warning about division above.
+-- | Division by a residue, which is not
+-- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
+-- with the modulus, throws 'DivideByZero'.
+-- Consider using 'invertMod' for non-prime moduli.
 instance KnownNat m => Field (Mod m)
 
 #endif
 
--- | See the warning about division above.
+-- | Division by a residue, which is not
+-- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
+-- with the modulus, throws 'DivideByZero'.
+-- Consider using 'invertMod' for non-prime moduli.
 instance KnownNat m => Fractional (Mod m) where
   fromRational r = case denominator r of
     1   -> num
@@ -338,6 +346,8 @@ lgWordSize = case wordSize of
   64 -> 3 -- 2^3 bytes in word
   _  -> error "lgWordSize: unknown architecture"
 
+-- | No validation checks are performed;
+-- reading untrusted data may corrupt internal invariants.
 instance KnownNat m => Storable (Mod m) where
   sizeOf _ = case natVal' (proxy# :: Proxy# m) of
     NatS#{}  -> sizeOf (0 :: Word)
@@ -377,6 +387,8 @@ instance KnownNat m => Storable (Mod m) where
 
 #ifdef MIN_VERSION_vector
 
+-- | No validation checks are performed;
+-- reading untrusted data may corrupt internal invariants.
 instance KnownNat m => P.Prim (Mod m) where
   sizeOf# x    = let !(I# sz#) = sizeOf x    in sz#
   {-# INLINE sizeOf# #-}
@@ -507,6 +519,8 @@ newtype instance U.Vector    (Mod m) = ModVec  (P.Vector (Mod m))
 
 instance KnownNat m => U.Unbox (Mod m)
 
+-- | No validation checks are performed;
+-- reading untrusted data may corrupt internal invariants.
 instance KnownNat m => M.MVector U.MVector (Mod m) where
   {-# INLINE basicLength #-}
   {-# INLINE basicUnsafeSlice #-}
@@ -534,6 +548,8 @@ instance KnownNat m => M.MVector U.MVector (Mod m) where
   basicUnsafeMove (ModMVec v1) (ModMVec v2) = M.basicUnsafeMove v1 v2
   basicUnsafeGrow (ModMVec v) n = ModMVec `liftM` M.basicUnsafeGrow v n
 
+-- | No validation checks are performed;
+-- reading untrusted data may corrupt internal invariants.
 instance KnownNat m => G.Vector U.Vector (Mod m) where
   {-# INLINE basicUnsafeFreeze #-}
   {-# INLINE basicUnsafeThaw #-}
