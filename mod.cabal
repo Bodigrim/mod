@@ -80,7 +80,7 @@ benchmark mod-bench
     -- finite-field,
     -- finite-typelits,
     -- modular,
-    -- modular-arithmetic,
+    -- modular-arithmetic >= 2,
     tasty-bench >= 0.2.5
   type: exitcode-stdio-1.0
   main-is: Bench.hs
