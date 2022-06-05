@@ -7,6 +7,7 @@
 
 module Main (main) where
 
+import Control.Exception (evaluate, try, ArithException(..))
 import Data.Bits
 import Data.Mod
 import qualified Data.Mod.Word as Word
@@ -19,7 +20,7 @@ import Test.Tasty.QuickCheck
 import Test.QuickCheck.Classes.Base
 
 #ifdef MIN_VERSION_semirings
-import Data.Semiring (Ring)
+import Data.Semiring (Ring, Semiring(..))
 import Test.QuickCheck.Classes (semiringLaws, ringLaws)
 #endif
 
@@ -66,6 +67,19 @@ main = defaultMain $ testGroup "All"
     , testProperty "powMod on sum" powModRandomAdditiveProp
     , testProperty "powMod special case" powModCase
     ]
+  , testGroup "Mod 0"
+    [ testProperty "0"            (isDivideByZero 0)
+    , testProperty "1"            (isDivideByZero 1)
+    , testProperty "minBound"     (isDivideByZero minBound)
+    , testProperty "maxBound"     (isDivideByZero maxBound)
+    , testProperty "toEnum"       (isDivideByZero (toEnum 0))
+    , testProperty "fromRational" (isDivideByZero (fromRational 0))
+#ifdef MIN_VERSION_semirings
+    , testProperty "zero"         (isDivideByZero zero)
+    , testProperty "one"          (isDivideByZero one)
+    , testProperty "fromNatural"  (isDivideByZero (fromNatural 0))
+#endif
+    ]
 
   , testGroup "Word.Mod 1" $
     testProperty "fromInteger"
@@ -98,6 +112,19 @@ main = defaultMain $ testGroup "All"
     , testProperty "powMod"      powModWordRandomProp
     , testProperty "powMod on sum" powModWordRandomAdditiveProp
     , testProperty "powMod special case" powModWordCase
+    ]
+  , testGroup "Word.Mod 0"
+    [ testProperty "0"            (isDivideByZeroWord 0)
+    , testProperty "1"            (isDivideByZeroWord 1)
+    , testProperty "minBound"     (isDivideByZeroWord minBound)
+    , testProperty "maxBound"     (isDivideByZeroWord maxBound)
+    , testProperty "toEnum"       (isDivideByZeroWord (toEnum 0))
+    , testProperty "fromRational" (isDivideByZeroWord (fromRational 0))
+#ifdef MIN_VERSION_semirings
+    , testProperty "zero"         (isDivideByZeroWord zero)
+    , testProperty "one"          (isDivideByZeroWord one)
+    , testProperty "fromNatural"  (isDivideByZeroWord (fromNatural 0))
+#endif
     ]
   ]
 
@@ -276,3 +303,12 @@ instance (Bits a, Num a, Arbitrary a) => Arbitrary (Huge a) where
     ds <- vector l
     return $ Huge $ foldl1 (\acc n -> acc `shiftL` 63 + n) ds
   shrink (Huge n) = Huge <$> shrink n
+
+-------------------------------------------------------------------------------
+-- DivideByZero
+
+isDivideByZero :: Mod 0 -> Property
+isDivideByZero x = ioProperty ((=== Left DivideByZero) <$> try (evaluate x))
+
+isDivideByZeroWord :: Word.Mod 0 -> Property
+isDivideByZeroWord x = ioProperty ((=== Left DivideByZero) <$> try (evaluate x))
