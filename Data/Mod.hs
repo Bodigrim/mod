@@ -252,8 +252,10 @@ instance KnownNat m => GcdDomain (Mod m) where
 -- Consider using 'invertMod' for non-prime moduli.
 instance KnownNat m => Euclidean (Mod m) where
   degree      = const 0
-  quotRem x y = (x / y, 0)
-  quot        = (/)
+  quotRem x y =
+    let !q = x / y
+        !z = 0
+    in (q, z)
   rem         = const $ const 0
 
 -- | Division by a residue, which is not
