@@ -101,8 +101,13 @@ instance KnownNat m => Enum (Mod m) where
   enumFromThenTo = coerce (enumFromThenTo @Word)
 
 instance KnownNat m => Bounded (Mod m) where
-  minBound = Mod 0
-  maxBound = let mx = Mod (fromIntegral (natVal mx) - 1) in mx
+  minBound = mx
+    where
+      mx = if natVal mx > 0 then Mod 0 else throw DivideByZero
+  maxBound = mx
+    where
+      mx = if m > 0 then Mod (fromIntegral (m - 1)) else throw DivideByZero
+      m = natVal mx
 
 #if !MIN_VERSION_base(4,12,0)
 addWordC# :: Word# -> Word# -> (# Word#, Int# #)
@@ -189,11 +194,17 @@ instance KnownNat m => Semiring (Mod m) where
   {-# INLINE plus #-}
   times = (*)
   {-# INLINE times #-}
-  zero  = Mod 0
+  zero  = mx
+    where
+      mx = if natVal mx > 0 then Mod 0 else throw DivideByZero
   {-# INLINE zero #-}
   one   = mx
     where
-      mx = if natVal mx > 1 then Mod 1 else Mod 0
+      mx = case m `compare` 1 of
+        LT -> throw DivideByZero
+        EQ -> Mod 0
+        GT -> Mod 1
+      m = natVal mx
   {-# INLINE one #-}
   fromNatural x = mx
     where
