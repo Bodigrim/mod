@@ -524,6 +524,8 @@ newtype instance U.MVector s (Mod m) = ModMVec (P.MVector s (Mod m))
 -- especially for large vectors.
 newtype instance U.Vector    (Mod m) = ModVec  (P.Vector (Mod m))
 
+-- | No validation checks are performed;
+-- reading untrusted data may corrupt internal invariants.
 instance KnownNat m => U.Unbox (Mod m)
 
 -- | No validation checks are performed;

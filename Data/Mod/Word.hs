@@ -406,6 +406,8 @@ infixr 8 ^%
 newtype instance U.MVector s (Mod m) = MV_Mod (P.MVector s Word)
 newtype instance U.Vector    (Mod m) = V_Mod  (P.Vector    Word)
 
+-- | No validation checks are performed;
+-- reading untrusted data may corrupt internal invariants.
 instance U.Unbox (Mod m)
 
 -- | No validation checks are performed;
