@@ -233,10 +233,30 @@ instance KnownNat m => Ring (Mod m) where
   negate = Prelude.negate
   {-# INLINE negate #-}
 
+-- | 'Mod' @m@ is not even an
+-- <https://en.wikipedia.org/wiki/Integral_domain integral domain> for
+-- <https://en.wikipedia.org/wiki/Composite_number composite> @m@,
+-- much less a <https://en.wikipedia.org/wiki/GCD_domain GCD domain>.
+-- However, 'Data.Euclidean.gcd' and 'Data.Euclidean.lcm' are still meaningful
+-- even for composite @m@, corresponding to a sum and an intersection of
+-- <https://en.wikipedia.org/wiki/Ideal_(ring_theory) ideals>.
+--
+-- The instance is lawful only for
+-- <https://en.wikipedia.org/wiki/Prime_number prime> @m@, otherwise
+-- 'Data.Euclidean.divide' returns any of quotients.
+--
 instance KnownNat m => GcdDomain (Mod m) where
-  divide x y = case invertMod y of
+  divide (Mod 0) _ = Just (Mod 0)
+  divide _ (Mod 0) = Nothing
+  divide mx@(Mod x) (Mod y) = case mry of
+    Just ry -> if xr == 0 then Just (Mod xq * Mod ry) else Nothing
     Nothing -> Nothing
-    Just z  -> Just (x * z)
+    where
+      m = natVal mx
+      gmy = Prelude.gcd m y
+      (xq, xr) = Prelude.quotRem x gmy
+      mry = invertModInternal (y `Prelude.quot` gmy)  (m `Prelude.quot` gmy)
+
   gcd (Mod x) (Mod y) = g
     where
       m = natVal g
@@ -247,22 +267,43 @@ instance KnownNat m => GcdDomain (Mod m) where
       l = Mod $ if m > 1 then Prelude.lcm (Prelude.gcd m x) (Prelude.gcd m y) else 0
   coprime x y = Data.Euclidean.gcd x y == 1
 
--- | Division by a residue, which is not
--- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
--- with the modulus, throws 'DivideByZero'.
--- Consider using 'invertMod' for non-prime moduli.
+-- | 'Mod' @m@ is not even an
+-- <https://en.wikipedia.org/wiki/Integral_domain integral domain> for
+-- <https://en.wikipedia.org/wiki/Composite_number composite> @m@,
+-- much less a <https://en.wikipedia.org/wiki/Euclidean_domain Euclidean domain>.
+--
+-- The instance is lawful only for
+-- <https://en.wikipedia.org/wiki/Prime_number prime> @m@, otherwise
+-- we try to do our best:
+-- 'Data.Euclidean.quot' returns any of quotients,
+-- 'Data.Euclidean.rem' is not always 0, and both can throw 'DivideByZero'.
+--
 instance KnownNat m => Euclidean (Mod m) where
-  degree      = const 0
-  quotRem x y =
-    let !q = x / y
-        !z = 0
-    in (q, z)
-  rem         = const $ const 0
+  degree = unMod
 
--- | Division by a residue, which is not
+  quotRem (Mod 0) _ = (Mod 0, Mod 0)
+  quotRem _ (Mod 0) = throw DivideByZero
+  quotRem mx@(Mod x) (Mod y) = case mry of
+    Just ry -> (Mod xq * Mod ry, Mod xr)
+    Nothing -> throw DivideByZero
+    where
+      m = natVal mx
+      gmy = Prelude.gcd m y
+      (xq, xr) = Prelude.quotRem x gmy
+      mry = invertModInternal (y `Prelude.quot` gmy)  (m `Prelude.quot` gmy)
+
+-- | 'Mod' @m@ is not even an
+-- <https://en.wikipedia.org/wiki/Integral_domain integral domain> for
+-- <https://en.wikipedia.org/wiki/Composite_number composite> @m@,
+-- much less a <https://en.wikipedia.org/wiki/Field_(mathematics) field>.
+--
+-- The instance is lawful only for
+-- <https://en.wikipedia.org/wiki/Prime_number prime> @m@, otherwise
+-- division by a residue, which is not
 -- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
 -- with the modulus, throws 'DivideByZero'.
 -- Consider using 'invertMod' for non-prime moduli.
+--
 instance KnownNat m => Field (Mod m)
 
 #endif
@@ -271,6 +312,7 @@ instance KnownNat m => Field (Mod m)
 -- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
 -- with the modulus, throws 'DivideByZero'.
 -- Consider using 'invertMod' for non-prime moduli.
+--
 instance KnownNat m => Fractional (Mod m) where
   fromRational r = case denominator r of
     1   -> num
@@ -294,13 +336,20 @@ instance KnownNat m => Fractional (Mod m) where
 -- >>> invertMod 4 :: Mod 10 -- 4 and 10 are not coprime
 -- Nothing
 invertMod :: KnownNat m => Mod m -> Maybe (Mod m)
-invertMod mx
+invertMod x = Mod <$> invertModInternal (unMod x) (natVal x)
+{-# INLINABLE invertMod #-}
+
+invertModInternal
+  :: Natural -- Value
+  -> Natural -- Modulo
+  -> Maybe Natural
+invertModInternal x m
   = if y <= 0
     then Nothing
-    else Just $ Mod $ fromInteger y
+    else Just $ fromInteger y
   where
-    y = recipModInteger (toInteger (unMod mx)) (toInteger (natVal mx))
-{-# INLINABLE invertMod #-}
+    y = recipModInteger (toInteger x) (toInteger m)
+{-# INLINABLE invertModInternal #-}
 
 -- | Drop-in replacement for 'Prelude.^' with much better performance.
 -- Negative powers are allowed, but may throw 'DivideByZero', if an argument

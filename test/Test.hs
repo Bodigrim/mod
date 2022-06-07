@@ -69,10 +69,12 @@ main = defaultMain $ testGroup "All"
     , testProperty "powMod on sum" powModRandomAdditiveProp
     , testProperty "powMod special case" powModCase
 #ifdef MIN_VERSION_semirings
-    , testProperty "divide"  divideIsInvertModRandom
+    , testProperty "divide"  dividePropRandom
     , testProperty "gcd"     gcdIsPrincipalIdealRandom
     , testProperty "lcm"     lcmIsIntersectionOfIdealsRandom
     , testProperty "coprime" coprimeGeneratorsRandom
+    , testProperty "quotRem" quotRemPropRandom
+    , testProperty "degree"  degreePropRandom
 #endif
     ]
   , testGroup "Mod 0"
@@ -326,12 +328,14 @@ isDivideByZeroWord x = ioProperty ((=== Left DivideByZero) <$> try (evaluate x))
 
 #ifdef MIN_VERSION_semirings
 
-divideIsInvertModRandom :: Positive Integer -> Integer -> Integer -> Property
-divideIsInvertModRandom (Positive m) x y = case someNatVal (fromInteger m) of
-  SomeNat (Proxy :: Proxy m) -> divideIsInvertMod (fromInteger x :: Mod m) (fromInteger y)
+dividePropRandom :: Positive (Small Integer) -> Positive Integer -> Positive Integer -> Property
+dividePropRandom (Positive (Small m)) (Positive x) (Positive y) = case someNatVal (fromInteger m) of
+  SomeNat (Proxy :: Proxy m) -> divideProp (fromInteger x :: Mod m) (fromInteger y)
 
-divideIsInvertMod :: KnownNat m => Mod m -> Mod m -> Property
-divideIsInvertMod x y = E.divide x y === ((* x) <$> invertMod y)
+divideProp :: KnownNat m => Mod m -> Mod m -> Property
+divideProp x y = case E.divide x y of
+  Just z -> x === y * z
+  Nothing -> filter ((== x) . (* y)) [minBound .. maxBound] === []
 
 gcdIsPrincipalIdealRandom :: Positive (Small Integer) -> Integer -> Integer -> Property
 gcdIsPrincipalIdealRandom (Positive (Small m)) x y = case someNatVal (fromInteger m) of
@@ -361,5 +365,27 @@ coprimeGenerators x y = E.coprime x y === (addIdeals (genIdeal x) (genIdeal y) =
   where
     genIdeal t = S.fromList $ map (* t) [minBound .. maxBound]
     addIdeals us vs = S.fromList [ u + v | u <- S.toList us, v <- S.toList vs ]
+
+quotRemPropRandom :: Positive (Small Integer) -> Positive Integer -> Positive Integer -> Property
+quotRemPropRandom (Positive (Small m)) (Positive x) (Positive y) = case someNatVal (fromInteger m) of
+  SomeNat (Proxy :: Proxy m) -> quotRemProp (fromInteger x :: Mod m) (fromInteger y)
+
+quotRemProp :: KnownNat m => Mod m -> Mod m -> Property
+quotRemProp x y = case E.divide x y of
+  Just z -> E.quotRem x y === (z, 0)
+  Nothing -> y /= 0 ==> let (q, r) = E.quotRem x y in
+    counterexample (show (q, r)) $ x === q * y + r
+
+degreePropRandom :: Positive (Small Integer) -> Positive Integer -> Positive Integer -> Property
+degreePropRandom (Positive (Small m)) (Positive x) (Positive y) = case someNatVal (fromInteger m) of
+  SomeNat (Proxy :: Proxy m) -> degreeProp (fromInteger x :: Mod m) (fromInteger y)
+
+degreeProp :: KnownNat m => Mod m -> Mod m -> Property
+degreeProp x y = ioProperty $ do
+  ret <- try (evaluate (E.quotRem x y))
+  pure $ case ret of
+    Left DivideByZero -> property True
+    Left{}            -> property False
+    Right (_, r)      -> r === 0 .||. property (E.degree r < E.degree y)
 
 #endif
