@@ -69,6 +69,7 @@ import GHC.TypeNats (Nat, KnownNat, natVal, natVal')
 -- >>> 3 + 8 :: Mod 10 -- 3 + 8 = 11 ≡ 1 (mod 10)
 -- (1 `modulo` 10)
 --
+-- __Note:__ 'Mod' 0 has no inhabitants, eventhough \( \mathbb{Z}/0\mathbb{Z} \) is technically isomorphic to \( \mathbb{Z} \).
 newtype Mod (m :: Nat) = Mod
   { unMod :: Natural
   -- ^ The canonical representative of the residue class,
