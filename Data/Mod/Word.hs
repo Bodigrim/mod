@@ -62,7 +62,7 @@ import GHC.TypeNats (Nat, KnownNat, natVal)
 --
 -- >>> :set -XDataKinds
 -- >>> 3 + 8 :: Mod 10 -- 3 + 8 = 11 ≡ 1 (mod 10)
--- (1 `modulo` 10)
+-- 1
 --
 -- __Note:__ 'Mod' 0 has no inhabitants, eventhough \( \mathbb{Z}/0\mathbb{Z} \) is technically isomorphic to \( \mathbb{Z} \).
 newtype Mod (m :: Nat) = Mod
@@ -72,7 +72,7 @@ newtype Mod (m :: Nat) = Mod
   --
   -- >>> :set -XDataKinds
   -- >>> -1 :: Mod 10
-  -- (9 `modulo` 10)
+  -- 9
   }
   deriving (Eq, Ord, Generic)
   deriving Storable
@@ -86,8 +86,8 @@ newtype Mod (m :: Nat) = Mod
 
 instance NFData (Mod m)
 
-instance KnownNat m => Show (Mod m) where
-  show m = "(" ++ show (unMod m) ++ " `modulo` " ++ show (natVal m) ++ ")"
+instance Show (Mod m) where
+  show (Mod x) = show x
 
 instance KnownNat m => Enum (Mod m) where
   succ x = if x == maxBound then throw Overflow  else coerce (succ @Word) x
@@ -271,7 +271,7 @@ instance KnownNat m => Fractional (Mod m) where
 --
 -- >>> :set -XDataKinds
 -- >>> invertMod 3 :: Mod 10 -- 3 * 7 = 21 ≡ 1 (mod 10)
--- Just (7 `modulo` 10)
+-- Just 7
 -- >>> invertMod 4 :: Mod 10 -- 4 and 10 are not coprime
 -- Nothing
 invertMod :: KnownNat m => Mod m -> Maybe (Mod m)
@@ -367,9 +367,9 @@ half x = x `shiftR` 1
 --
 -- >>> :set -XDataKinds
 -- >>> 3 ^% 4 :: Mod 10    -- 3 ^ 4 = 81 ≡ 1 (mod 10)
--- (1 `modulo` 10)
+-- 1
 -- >>> 3 ^% (-1) :: Mod 10 -- 3 * 7 = 21 ≡ 1 (mod 10)
--- (7 `modulo` 10)
+-- 7
 -- >>> 4 ^% (-1) :: Mod 10 -- 4 and 10 are not coprime
 -- (*** Exception: divide by zero
 (^%) :: (KnownNat m, Integral a) => Mod m -> a -> Mod m
