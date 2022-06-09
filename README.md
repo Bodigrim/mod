@@ -7,15 +7,15 @@ Originally a part of the [arithmoi](https://hackage.haskell.org/package/arithmoi
 ```haskell
 > :set -XDataKinds
 > 4 + 5 :: Mod 7
-(2 `modulo` 7)
+2
 > 4 - 5 :: Mod 7
-(6 `modulo` 7)
+6
 > 4 * 5 :: Mod 7
-(6 `modulo` 7)
+6
 > 4 / 5 :: Mod 7
-(5 `modulo` 7)
+5
 > 4 ^ 5 :: Mod 7
-(2 `modulo` 7)
+2
 ```
 
 ## Competitors
