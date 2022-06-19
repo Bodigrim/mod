@@ -231,7 +231,7 @@ instance KnownNat m => Ring (Mod m) where
 --
 -- The instance is lawful only for
 -- <https://en.wikipedia.org/wiki/Prime_number prime> @m@, otherwise
--- 'Data.Euclidean.divide' returns any of quotients.
+-- @'Data.Euclidean.divide' x y@ tries to return any @Just z@ such that @x == y * z@.
 --
 instance KnownNat m => GcdDomain (Mod m) where
   divide (Mod 0) !_ = Just (Mod 0)
@@ -263,7 +263,7 @@ instance KnownNat m => GcdDomain (Mod m) where
 -- The instance is lawful only for
 -- <https://en.wikipedia.org/wiki/Prime_number prime> @m@, otherwise
 -- we try to do our best:
--- 'Data.Euclidean.quot' returns any of quotients,
+-- @'Data.Euclidean.quot' x y@ returns any @z@ such that @x == y * z@,
 -- 'Data.Euclidean.rem' is not always 0, and both can throw 'DivideByZero'.
 --
 instance KnownNat m => Euclidean (Mod m) where
