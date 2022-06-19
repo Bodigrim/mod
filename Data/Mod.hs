@@ -265,7 +265,7 @@ instance KnownNat m => GcdDomain (Mod m) where
     where
       m = natVal l
       l = Mod $ if m > 1 then Prelude.lcm (Prelude.gcd m x) (Prelude.gcd m y) else 0
-  coprime x y = Data.Euclidean.gcd x y == 1
+  coprime x y = Data.Euclidean.gcd x y == one
 
 -- | 'Mod' @m@ is not even an
 -- <https://en.wikipedia.org/wiki/Integral_domain integral domain> for
@@ -280,6 +280,7 @@ instance KnownNat m => GcdDomain (Mod m) where
 --
 instance KnownNat m => Euclidean (Mod m) where
   degree = unMod
+  {-# INLINABLE degree #-}
 
   quotRem (Mod 0) _ = (Mod 0, Mod 0)
   quotRem _ (Mod 0) = throw DivideByZero
