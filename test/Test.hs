@@ -122,6 +122,14 @@ main = defaultMain $ testGroup "All"
     , testProperty "powMod"      powModWordRandomProp
     , testProperty "powMod on sum" powModWordRandomAdditiveProp
     , testProperty "powMod special case" powModWordCase
+#ifdef MIN_VERSION_semirings
+    , testProperty "divide"  divideWordPropRandom
+    , testProperty "gcd"     gcdIsPrincipalIdealWordRandom
+    , testProperty "lcm"     lcmIsIntersectionOfIdealsWordRandom
+    , testProperty "coprime" coprimeGeneratorsWordRandom
+    , testProperty "quotRem" quotRemWordPropRandom
+    , testProperty "degree"  degreeWordPropRandom
+#endif
     ]
   , testGroup "Word.Mod 0"
     [ testProperty "0"            (isDivideByZeroWord 0)
@@ -382,6 +390,66 @@ degreePropRandom (Positive (Small m)) (Positive x) (Positive y) = case someNatVa
 
 degreeProp :: KnownNat m => Mod m -> Mod m -> Property
 degreeProp x y = ioProperty $ do
+  ret <- try (evaluate (E.quotRem x y))
+  pure $ case ret of
+    Left DivideByZero -> property True
+    Left{}            -> property False
+    Right (_, r)      -> r === 0 .||. property (E.degree r < E.degree y)
+
+divideWordPropRandom :: Positive Word -> Word -> Word -> Property
+divideWordPropRandom (Positive m) x y = case someNatVal (fromIntegral m) of
+  SomeNat (Proxy :: Proxy m) -> divideWordProp (fromIntegral x :: Word.Mod m) (fromIntegral y)
+
+divideWordProp :: KnownNat m => Word.Mod m -> Word.Mod m -> Property
+divideWordProp x y = case E.divide x y of
+  Just z -> x === y * z
+  Nothing -> filter ((== x) . (* y)) [minBound .. maxBound] === []
+
+gcdIsPrincipalIdealWordRandom :: Positive Word -> Word -> Word -> Property
+gcdIsPrincipalIdealWordRandom (Positive m) x y = case someNatVal (fromIntegral m) of
+  SomeNat (Proxy :: Proxy m) -> gcdIsPrincipalIdealWord (fromIntegral x :: Word.Mod m) (fromIntegral y)
+
+gcdIsPrincipalIdealWord :: KnownNat m => Word.Mod m -> Word.Mod m -> Property
+gcdIsPrincipalIdealWord x y = addIdeals (genIdeal x) (genIdeal y) === genIdeal (E.gcd x y)
+  where
+    genIdeal t = S.fromList $ map (* t) [minBound .. maxBound]
+    addIdeals us vs = S.fromList [ u + v | u <- S.toList us, v <- S.toList vs ]
+
+lcmIsIntersectionOfIdealsWordRandom :: Positive Word -> Word -> Word -> Property
+lcmIsIntersectionOfIdealsWordRandom (Positive m) x y = case someNatVal (fromIntegral m) of
+  SomeNat (Proxy :: Proxy m) -> lcmIsIntersectionOfIdealsWord (fromIntegral x :: Word.Mod m) (fromIntegral y)
+
+lcmIsIntersectionOfIdealsWord :: KnownNat m => Word.Mod m -> Word.Mod m -> Property
+lcmIsIntersectionOfIdealsWord x y = S.intersection (genIdeal x) (genIdeal y) === genIdeal (E.lcm x y)
+  where
+    genIdeal t = S.fromList $ map (* t) [minBound .. maxBound]
+
+coprimeGeneratorsWordRandom :: Positive Word -> Word -> Word -> Property
+coprimeGeneratorsWordRandom (Positive m) x y = case someNatVal (fromIntegral m) of
+  SomeNat (Proxy :: Proxy m) -> coprimeGeneratorsWord (fromIntegral x :: Word.Mod m) (fromIntegral y)
+
+coprimeGeneratorsWord :: KnownNat m => Word.Mod m -> Word.Mod m -> Property
+coprimeGeneratorsWord x y = E.coprime x y === (addIdeals (genIdeal x) (genIdeal y) == S.fromList [minBound .. maxBound])
+  where
+    genIdeal t = S.fromList $ map (* t) [minBound .. maxBound]
+    addIdeals us vs = S.fromList [ u + v | u <- S.toList us, v <- S.toList vs ]
+
+quotRemWordPropRandom :: Positive Word -> Word -> Word -> Property
+quotRemWordPropRandom (Positive m) x y = case someNatVal (fromIntegral m) of
+  SomeNat (Proxy :: Proxy m) -> quotRemWordProp (fromIntegral x :: Word.Mod m) (fromIntegral y)
+
+quotRemWordProp :: KnownNat m => Word.Mod m -> Word.Mod m -> Property
+quotRemWordProp x y = case E.divide x y of
+  Just z -> E.quotRem x y === (z, 0)
+  Nothing -> y /= 0 ==> let (q, r) = E.quotRem x y in
+    counterexample (show (q, r)) $ x === q * y + r
+
+degreeWordPropRandom :: Positive Word -> Word -> Word -> Property
+degreeWordPropRandom (Positive m) x y = case someNatVal (fromIntegral m) of
+  SomeNat (Proxy :: Proxy m) -> degreeWordProp (fromIntegral x :: Word.Mod m) (fromIntegral y)
+
+degreeWordProp :: KnownNat m => Word.Mod m -> Word.Mod m -> Property
+degreeWordProp x y = ioProperty $ do
   ret <- try (evaluate (E.quotRem x y))
   pure $ case ret of
     Left DivideByZero -> property True
