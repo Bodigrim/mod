@@ -169,6 +169,10 @@ fromNaturalMod NatJ#{} _ = tooLargeModulus
 tooLargeModulus :: a
 tooLargeModulus = error "modulus does not fit into a machine word"
 
+getModulus :: Natural -> Word
+getModulus (NatS# m#) = W# m#
+getModulus NatJ#{} = tooLargeModulus
+
 instance KnownNat m => Num (Mod m) where
   mx@(Mod !x) + (Mod !y) = Mod $ addMod (natVal mx) x y
   {-# INLINE (+) #-}
@@ -217,33 +221,77 @@ instance KnownNat m => Ring (Mod m) where
   negate = P.negate
   {-# INLINE negate #-}
 
--- | Division by a residue, which is not
--- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
--- with the modulus, throws 'DivideByZero'.
--- Consider using 'invertMod' for non-prime moduli.
+-- | 'Mod' @m@ is not even an
+-- <https://en.wikipedia.org/wiki/Integral_domain integral domain> for
+-- <https://en.wikipedia.org/wiki/Composite_number composite> @m@,
+-- much less a <https://en.wikipedia.org/wiki/GCD_domain GCD domain>.
+-- However, 'Data.Euclidean.gcd' and 'Data.Euclidean.lcm' are still meaningful
+-- even for composite @m@, corresponding to a sum and an intersection of
+-- <https://en.wikipedia.org/wiki/Ideal_(ring_theory) ideals>.
+--
+-- The instance is lawful only for
+-- <https://en.wikipedia.org/wiki/Prime_number prime> @m@, otherwise
+-- 'Data.Euclidean.divide' returns any of quotients.
+--
 instance KnownNat m => GcdDomain (Mod m) where
-  divide x y = Just $! x / y
-  gcd        = const $ const 1
-  lcm        = const $ const 1
-  coprime    = const $ const True
+  divide (Mod 0) !_ = Just (Mod 0)
+  divide _ (Mod 0) = Nothing
+  divide mx@(Mod x) (Mod y) = case mry of
+    Just ry -> if xr == 0 then Just (Mod xq * Mod ry) else Nothing
+    Nothing -> Nothing
+    where
+      m = getModulus (natVal mx)
+      gmy = P.gcd m y
+      (xq, xr) = P.quotRem x gmy
+      mry = invertModWord (y `P.quot` gmy)  (m `P.quot` gmy)
 
--- | Division by a residue, which is not
--- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
--- with the modulus, throws 'DivideByZero'.
--- Consider using 'invertMod' for non-prime moduli.
+  gcd (Mod !x) (Mod !y) = g
+    where
+      m = getModulus (natVal g)
+      g = Mod $ if m > 1 then P.gcd (P.gcd m x) y else 0
+  lcm (Mod !x) (Mod !y) = l
+    where
+      m = getModulus (natVal l)
+      l = Mod $ if m > 1 then P.lcm (P.gcd m x) (P.gcd m y) else 0
+  coprime x y = Data.Euclidean.gcd x y == one
+
+-- | 'Mod' @m@ is not even an
+-- <https://en.wikipedia.org/wiki/Integral_domain integral domain> for
+-- <https://en.wikipedia.org/wiki/Composite_number composite> @m@,
+-- much less a <https://en.wikipedia.org/wiki/Euclidean_domain Euclidean domain>.
+--
+-- The instance is lawful only for
+-- <https://en.wikipedia.org/wiki/Prime_number prime> @m@, otherwise
+-- we try to do our best:
+-- 'Data.Euclidean.quot' returns any of quotients,
+-- 'Data.Euclidean.rem' is not always 0, and both can throw 'DivideByZero'.
+--
 instance KnownNat m => Euclidean (Mod m) where
-  degree      = const 0
-  quotRem x y =
-    let !q = x / y
-        !z = 0
-    in (q, z)
-  quot        = (/)
-  rem         = const $ const 0
+  degree = fromIntegral . unMod
 
--- | Division by a residue, which is not
+  quotRem (Mod 0) !_ = (Mod 0, Mod 0)
+  quotRem _ (Mod 0) = throw DivideByZero
+  quotRem mx@(Mod x) (Mod y) = case mry of
+    Just ry -> (Mod xq * Mod ry, Mod xr)
+    Nothing -> throw DivideByZero
+    where
+      m = getModulus (natVal mx)
+      gmy = P.gcd m y
+      (xq, xr) = P.quotRem x gmy
+      mry = invertModWord (y `P.quot` gmy)  (m `P.quot` gmy)
+
+-- | 'Mod' @m@ is not even an
+-- <https://en.wikipedia.org/wiki/Integral_domain integral domain> for
+-- <https://en.wikipedia.org/wiki/Composite_number composite> @m@,
+-- much less a <https://en.wikipedia.org/wiki/Field_(mathematics) field>.
+--
+-- The instance is lawful only for
+-- <https://en.wikipedia.org/wiki/Prime_number prime> @m@, otherwise
+-- division by a residue, which is not
 -- <https://en.wikipedia.org/wiki/Coprime_integers coprime>
 -- with the modulus, throws 'DivideByZero'.
 -- Consider using 'invertMod' for non-prime moduli.
+--
 instance KnownNat m => Field (Mod m)
 
 #endif
