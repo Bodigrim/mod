@@ -2,6 +2,7 @@
 {-# LANGUAGE DataKinds           #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications    #-}
+{-# LANGUAGE TypeOperators       #-}
 
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
@@ -14,7 +15,7 @@ import qualified Data.Mod.Word as Word
 import Data.Proxy
 import Data.Semigroup
 import Foreign.Storable (Storable(..))
-import GHC.TypeNats (KnownNat, SomeNat(..), natVal, someNatVal)
+import GHC.TypeNats (KnownNat, SomeNat(..), natVal, someNatVal, type (^))
 import Test.Tasty
 import Test.Tasty.QuickCheck
 import Test.QuickCheck.Classes.Base
@@ -62,6 +63,12 @@ main = defaultMain $ testGroup "All"
     testProperty "powMod"      (powModProp      @123456789012345678901234567890) :
     testProperty "invertMod"   (invertModProp   @123456789012345678901234567890) :
     map lawsToTest (laws (Proxy :: Proxy (Mod 123456789012345678901234567890)))
+  , testGroup "Mod 2 ^ 40000" $
+    testProperty "fromInteger"
+      (fromIntegerProp (Proxy :: Proxy (2 ^ 40000))) :
+    testProperty "powMod"      (powModProp      @(2 ^ 40000)) :
+    testProperty "invertMod"   (invertModProp   @(2 ^ 40000)) :
+    map lawsToTest (laws (Proxy :: Proxy (Mod (2 ^ 40000))))
   , testGroup "Random Mod"
     [ testProperty "fromInteger" fromIntegerRandomProp
     , testProperty "invertMod"   invertModRandomProp
