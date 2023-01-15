@@ -13,15 +13,20 @@
 
 {-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP                        #-}
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MagicHash                  #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
+{-# LANGUAGE PolyKinds                  #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
-{-# LANGUAGE TypeInType                 #-}
 {-# LANGUAGE UnboxedTuples              #-}
+
+#if !MIN_VERSION_base(4,12,0)
+{-# LANGUAGE TypeInType                 #-}
+#endif
 
 module Data.Mod.Word
   ( Mod
