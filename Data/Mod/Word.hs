@@ -169,14 +169,14 @@ fromNaturalMod (NatS# m#) (NatS# x#) = W# (x# `remWord#` m#)
 fromNaturalMod (NatS# m#) (NatJ# x#) = W# (x# `remBigNatWord` m#)
 fromNaturalMod NatJ#{} _ = tooLargeModulus
 
+getModulus :: Natural -> Word
+getModulus (NatS# m#) = W# m#
+getModulus NatJ#{} = tooLargeModulus
+
 #endif
 
 tooLargeModulus :: a
 tooLargeModulus = error "modulus does not fit into a machine word"
-
-getModulus :: Natural -> Word
-getModulus (NatS# m#) = W# m#
-getModulus NatJ#{} = tooLargeModulus
 
 instance KnownNat m => Num (Mod m) where
   mx@(Mod !x) + (Mod !y) = Mod $ addMod (natVal mx) x y
