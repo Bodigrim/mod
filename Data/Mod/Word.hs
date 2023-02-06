@@ -13,6 +13,7 @@
 
 {-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP                        #-}
+{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
@@ -21,10 +22,6 @@
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UnboxedTuples              #-}
-
-#if !MIN_VERSION_base(4,12,0)
-{-# LANGUAGE TypeInType                 #-}
-#endif
 
 module Data.Mod.Word
   ( Mod
@@ -114,13 +111,6 @@ instance KnownNat m => Bounded (Mod m) where
     where
       mx = if m > 0 then Mod (fromIntegral (m - 1)) else throw DivideByZero
       m = natVal mx
-
-#if !MIN_VERSION_base(4,12,0)
-addWordC# :: Word# -> Word# -> (# Word#, Int# #)
-addWordC# x# y# = (# z#, word2Int# c# #)
-  where
-    !(# c#, z# #) = x# `plusWord2#` y#
-#endif
 
 addMod :: Natural -> Word -> Word -> Word
 addMod (NatS# m#) (W# x#) (W# y#) =

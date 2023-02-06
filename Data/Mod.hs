@@ -118,13 +118,6 @@ subIfGe z# m# = case z# `bigNatSub` m# of
   (# (# #) | #) -> NatJ# (BN# z#)
   (# | zm# #)   -> bigNatToNat zm#
 
-#if !MIN_VERSION_base(4,12,0)
-addWordC# :: Word# -> Word# -> (# Word#, Int# #)
-addWordC# x# y# = (# z#, word2Int# c# #)
-  where
-    !(# c#, z# #) = x# `plusWord2#` y#
-#endif
-
 addMod :: Natural -> Natural -> Natural -> Natural
 addMod (NatS# m#) (NatS# x#) (NatS# y#) =
   if isTrue# c# || isTrue# (z# `geWord#` m#) then NatS# (z# `minusWord#` m#) else NatS# z#
