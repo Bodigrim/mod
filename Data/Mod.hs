@@ -49,13 +49,14 @@ import qualified Data.Vector.Generic.Mutable as M
 import qualified Data.Vector.Unboxed         as U
 import qualified Data.Vector.Primitive       as P
 import Foreign (copyBytes)
-import GHC.IO.Unsafe (unsafeDupablePerformIO)
 #endif
 import Foreign.Storable (Storable(..))
 import GHC.Exts
 import GHC.Generics
-import GHC.Integer.GMP.Internals
+import GHC.IO (IO(..))
 import GHC.Natural (Natural(..), powModNatural)
+import GHC.Num.BigNat
+import GHC.Num.Integer
 import GHC.TypeNats (Nat, KnownNat, natVal, natVal')
 
 -- | This data type represents
@@ -90,7 +91,7 @@ instance KnownNat m => Enum (Mod m) where
   succ x = if x == maxBound then throw Overflow  else coerce (succ @Natural) x
   pred x = if x == minBound then throw Underflow else coerce (pred @Natural) x
 
-  toEnum   = (fromIntegral :: Int -> Mod m)
+  toEnum   = fromIntegral :: Int -> Mod m
   fromEnum = (fromIntegral :: Natural -> Int) . unMod
 
   enumFrom x       = enumFromTo x maxBound
@@ -108,15 +109,14 @@ instance KnownNat m => Bounded (Mod m) where
       mx = if m > 0 then Mod (m - 1) else throw DivideByZero
       m = natVal mx
 
-bigNatToNat :: BigNat -> Natural
+bigNatToNat :: BigNat# -> Natural
 bigNatToNat r# =
-  if isTrue# (sizeofBigNat# r# <=# 1#) then NatS# (bigNatToWord r#) else NatJ# r#
+  if isTrue# (bigNatSize# r# <=# 1#) then NatS# (bigNatToWord# r#) else NatJ# (BN# r#)
 
-subIfGe :: BigNat -> BigNat -> Natural
-subIfGe z# m# = case z# `compareBigNat` m# of
-  LT -> NatJ# z#
-  EQ -> NatS# 0##
-  GT -> bigNatToNat $ z# `minusBigNat` m#
+subIfGe :: BigNat# -> BigNat# -> Natural
+subIfGe z# m# = case z# `bigNatSub` m# of
+  (# (# #) | #) -> NatJ# (BN# z#)
+  (# | zm# #)   -> bigNatToNat zm#
 
 #if !MIN_VERSION_base(4,12,0)
 addWordC# :: Word# -> Word# -> (# Word#, Int# #)
@@ -131,13 +131,13 @@ addMod (NatS# m#) (NatS# x#) (NatS# y#) =
   where
     !(# z#, c# #) = x# `addWordC#` y#
 addMod NatS#{} _ _ = brokenInvariant
-addMod (NatJ# m#) (NatS# x#) (NatS# y#) =
-  if isTrue# c# then subIfGe (wordToBigNat2 1## z#) m# else NatS# z#
+addMod (NatJ# (BN# m#)) (NatS# x#) (NatS# y#) =
+  if isTrue# c# then subIfGe (bigNatFromWord2# 1## z#) m# else NatS# z#
   where
     !(# z#, c# #) = x# `addWordC#` y#
-addMod (NatJ# m#) (NatS# x#) (NatJ# y#) = subIfGe (y# `plusBigNatWord` x#) m#
-addMod (NatJ# m#) (NatJ# x#) (NatS# y#) = subIfGe (x# `plusBigNatWord` y#) m#
-addMod (NatJ# m#) (NatJ# x#) (NatJ# y#) = subIfGe (x# `plusBigNat`     y#) m#
+addMod (NatJ# (BN# m#)) (NatS# x#) (NatJ# (BN# y#)) = subIfGe (y# `bigNatAddWord#` x#) m#
+addMod (NatJ# (BN# m#)) (NatJ# (BN# x#)) (NatS# y#) = subIfGe (x# `bigNatAddWord#` y#) m#
+addMod (NatJ# (BN# m#)) (NatJ# (BN# x#)) (NatJ# (BN# y#)) = subIfGe (x# `bigNatAdd` y#) m#
 
 subMod :: Natural -> Natural -> Natural -> Natural
 subMod (NatS# m#) (NatS# x#) (NatS# y#) =
@@ -145,25 +145,25 @@ subMod (NatS# m#) (NatS# x#) (NatS# y#) =
   where
     z# = x# `minusWord#` y#
 subMod NatS#{} _ _ = brokenInvariant
-subMod (NatJ# m#) (NatS# x#) (NatS# y#) =
+subMod (NatJ# (BN# m#)) (NatS# x#) (NatS# y#) =
   if isTrue# (x# `geWord#` y#)
     then NatS# (x# `minusWord#` y#)
-    else bigNatToNat $ m# `minusBigNatWord` (y# `minusWord#` x#)
-subMod (NatJ# m#) (NatS# x#) (NatJ# y#) =
-  bigNatToNat $ (m# `minusBigNat` y#) `plusBigNatWord` x#
-subMod NatJ#{} (NatJ# x#) (NatS# y#) =
-  bigNatToNat $ x# `minusBigNatWord` y#
-subMod (NatJ# m#) (NatJ# x#) (NatJ# y#) = case x# `compareBigNat` y# of
-  LT -> bigNatToNat $ (m# `minusBigNat` y#) `plusBigNat` x#
-  EQ -> NatS# 0##
-  GT -> bigNatToNat $ x# `minusBigNat` y#
+    else bigNatToNat (m# `bigNatSubWordUnsafe#` (y# `minusWord#` x#))
+subMod (NatJ# (BN# m#)) (NatS# x#) (NatJ# (BN# y#)) =
+  bigNatToNat (m# `bigNatSubUnsafe` y# `bigNatAddWord#` x#)
+subMod NatJ#{} (NatJ# (BN# x#)) (NatS# y#) =
+  bigNatToNat (x# `bigNatSubWordUnsafe#` y#)
+subMod (NatJ# (BN# m#)) (NatJ# (BN# x#)) (NatJ# (BN# y#)) =
+  case x# `bigNatSub` y# of
+    (# (# #) | #) -> bigNatToNat (m# `bigNatSubUnsafe` y# `bigNatAdd` x#)
+    (# | xy# #) -> bigNatToNat xy#
 
 negateMod :: Natural -> Natural -> Natural
 negateMod _ (NatS# 0##) = NatS# 0##
 negateMod (NatS# m#) (NatS# x#) = NatS# (m# `minusWord#` x#)
 negateMod NatS#{} _ = brokenInvariant
-negateMod (NatJ# m#) (NatS# x#) = bigNatToNat $ m# `minusBigNatWord` x#
-negateMod (NatJ# m#) (NatJ# x#) = bigNatToNat $ m# `minusBigNat`     x#
+negateMod (NatJ# (BN# m#)) (NatS# x#) = bigNatToNat (m# `bigNatSubWordUnsafe#` x#)
+negateMod (NatJ# (BN# m#)) (NatJ# (BN# x#)) = bigNatToNat (m# `bigNatSubUnsafe` x#)
 
 mulMod :: Natural -> Natural -> Natural -> Natural
 mulMod (NatS# m#) (NatS# x#) (NatS# y#) = NatS# r#
@@ -171,16 +171,16 @@ mulMod (NatS# m#) (NatS# x#) (NatS# y#) = NatS# r#
     !(# z1#, z2# #) = timesWord2# x# y#
     !(# _, r# #) = quotRemWord2# z1# z2# m#
 mulMod NatS#{} _ _ = brokenInvariant
-mulMod (NatJ# m#) (NatS# x#) (NatS# y#) =
-  bigNatToNat $ wordToBigNat2 z1# z2# `remBigNat` m#
+mulMod (NatJ# (BN# m#)) (NatS# x#) (NatS# y#) =
+  bigNatToNat (bigNatFromWord2# z1# z2# `bigNatRem` m#)
   where
     !(# z1#, z2# #) = timesWord2# x# y#
-mulMod (NatJ# m#) (NatS# x#) (NatJ# y#) =
-  bigNatToNat $ (y# `timesBigNatWord` x#) `remBigNat` m#
-mulMod (NatJ# m#) (NatJ# x#) (NatS# y#) =
-  bigNatToNat $ (x# `timesBigNatWord` y#) `remBigNat` m#
-mulMod (NatJ# m#) (NatJ# x#) (NatJ# y#) =
-  bigNatToNat $ (x# `timesBigNat` y#) `remBigNat` m#
+mulMod (NatJ# (BN# m#)) (NatS# x#) (NatJ# (BN# y#)) =
+  bigNatToNat ((y# `bigNatMulWord#` x#) `bigNatRem` m#)
+mulMod (NatJ# (BN# m#)) (NatJ# (BN# x#)) (NatS# y#) =
+  bigNatToNat ((x# `bigNatMulWord#` y#) `bigNatRem` m#)
+mulMod (NatJ# (BN# m#)) (NatJ# (BN# x#)) (NatJ# (BN# y#)) =
+  bigNatToNat ((x# `bigNatMul` y#) `bigNatRem` m#)
 
 brokenInvariant :: a
 brokenInvariant = error "argument is larger than modulus"
@@ -344,12 +344,9 @@ invertModInternal
   :: Natural -- Value
   -> Natural -- Modulo
   -> Maybe Natural
-invertModInternal x m
-  = if y <= 0
-    then Nothing
-    else Just $ fromInteger y
-  where
-    y = recipModInteger (toInteger x) (toInteger m)
+invertModInternal x m = case integerRecipMod# (toInteger x) m of
+  (# | () #) -> Nothing
+  (# y | #)  -> Just y
 {-# INLINABLE invertModInternal #-}
 
 -- | Drop-in replacement for 'Prelude.^' with much better performance.
@@ -408,7 +405,7 @@ lgWordSize = case wordSize of
 instance KnownNat m => Storable (Mod m) where
   sizeOf _ = case natVal' (proxy# :: Proxy# m) of
     NatS#{}  -> sizeOf (0 :: Word)
-    NatJ# m# -> I# (sizeofBigNat# m#) `shiftL` lgWordSize
+    NatJ# (BN# m#) -> I# (bigNatSize# m#) `shiftL` lgWordSize
   {-# INLINE sizeOf #-}
 
   alignment _ = alignment (0 :: Word)
@@ -418,10 +415,10 @@ instance KnownNat m => Storable (Mod m) where
     NatS#{} -> do
       W# w# <- peek (Ptr addr#)
       pure . Mod $! NatS# w#
-    NatJ# m# -> do
+    NatJ# (BN# m#) -> do
       let !(I# lgWordSize#) = lgWordSize
-          sz# = sizeofBigNat# m# `iShiftL#` lgWordSize#
-      bn <- importBigNatFromAddr addr# (int2Word# sz#) 0#
+          sz# = bigNatSize# m# `iShiftL#` lgWordSize#
+      BN# bn <- IO (\token -> case bigNatFromAddrLE# (int2Word# sz#) addr# token of (# newToken, bn# #) -> (# newToken, BN# bn# #))
       pure . Mod $! bigNatToNat bn
   {-# INLINE peek #-}
 
@@ -429,17 +426,17 @@ instance KnownNat m => Storable (Mod m) where
     NatS#{} -> case x of
       NatS# x# -> poke (Ptr addr#) (W# x#)
       _        -> brokenInvariant
-    NatJ# m# -> case x of
+    NatJ# (BN# m#) -> case x of
       NatS# x# -> do
         poke (Ptr addr#) (W# x#)
         forM_ [1 .. sz - 1] $ \off ->
           pokeElemOff (Ptr addr#) off (0 :: Word)
-      NatJ# bn -> do
-        l <- exportBigNatToAddr bn addr# 0#
+      NatJ# (BN# bn) -> do
+        l <- IO (\token -> case bigNatToAddrLE# bn addr# token of (# newToken, l# #) -> (# newToken, W# l# #))
         forM_ [(fromIntegral :: Word -> Int) l .. (sz `shiftL` lgWordSize) - 1] $ \off ->
           pokeElemOff (Ptr addr#) off (0 :: Word8)
       where
-        sz = I# (sizeofBigNat# m#)
+        sz = I# (bigNatSize# m#)
   {-# INLINE poke #-}
 
 #ifdef MIN_VERSION_vector
@@ -457,10 +454,10 @@ instance KnownNat m => P.Prim (Mod m) where
     NatS#{} -> Mod (NatS# w#)
       where
         !(W# w#) = P.indexByteArray# arr# i'
-    NatJ# m# -> Mod $ bigNatToNat $ importBigNatFromByteArray arr# (int2Word# i#) (int2Word# sz#) 0#
+    NatJ# (BN# m#) -> Mod $ bigNatToNat (runRW# (\token -> case bigNatFromByteArrayLE# (int2Word# sz#) arr# (int2Word# i#) token of (# _, bn# #) -> bn#))
       where
         !(I# lgWordSize#) = lgWordSize
-        sz# = sizeofBigNat# m# `iShiftL#` lgWordSize#
+        sz# = bigNatSize# m# `iShiftL#` lgWordSize#
         i# = i' *# sz#
   {-# INLINE indexByteArray# #-}
 
@@ -468,32 +465,33 @@ instance KnownNat m => P.Prim (Mod m) where
     NatS#{} -> Mod (NatS# w#)
       where
         !(W# w#) = P.indexOffAddr# arr# i'
-    NatJ# m# -> Mod $ bigNatToNat $ unsafeDupablePerformIO $ importBigNatFromAddr (arr# `plusAddr#` i#) (int2Word# sz#) 0#
+    NatJ# (BN# m#) -> Mod $ bigNatToNat (runRW# (\token -> case bigNatFromAddrLE# (int2Word# sz#) (arr# `plusAddr#` i#) token of (# _, bn# #) -> bn#))
       where
         !(I# lgWordSize#) = lgWordSize
-        sz# = sizeofBigNat# m# `iShiftL#` lgWordSize#
+        sz# = bigNatSize# m# `iShiftL#` lgWordSize#
         i# = i' *# sz#
   {-# INLINE indexOffAddr# #-}
 
   readByteArray# marr !i' token = case natVal' (proxy# :: Proxy# m) of
     NatS#{} -> case P.readByteArray# marr i' token of
       (# newToken, W# w# #) -> (# newToken, Mod (NatS# w#) #)
-    NatJ# m# -> case unsafeFreezeByteArray# marr token of
-      (# newToken, arr #) -> (# newToken, Mod (bigNatToNat (importBigNatFromByteArray arr (int2Word# i#) (int2Word# sz#) 0#)) #)
+    NatJ# (BN# m#) -> case unsafeFreezeByteArray# marr token of
+      (# newToken, arr #) -> case bigNatFromByteArrayLE# (int2Word# sz#) arr (int2Word# i#) newToken of
+        (# veryNewToken, bn# #) -> (# veryNewToken,Mod (bigNatToNat bn#) #)
       where
         !(I# lgWordSize#) = lgWordSize
-        sz# = sizeofBigNat# m# `iShiftL#` lgWordSize#
+        sz# = bigNatSize# m# `iShiftL#` lgWordSize#
         i# = i' *# sz#
   {-# INLINE readByteArray# #-}
 
   readOffAddr# marr !i' token = case natVal' (proxy# :: Proxy# m) of
     NatS#{} -> case P.readOffAddr# marr i' token of
       (# newToken, W# w# #) -> (# newToken, Mod (NatS# w#) #)
-    NatJ# m# -> case internal (unsafeIOToPrim (importBigNatFromAddr (marr `plusAddr#` i#) (int2Word# sz#) 0#) :: ST s BigNat) token of
+    NatJ# (BN# m#) -> case bigNatFromAddrLE# (int2Word# sz#) (marr `plusAddr#` i#) token of
       (# newToken, bn #) -> (# newToken, Mod (bigNatToNat bn) #)
       where
         !(I# lgWordSize#) = lgWordSize
-        sz# = sizeofBigNat# m# `iShiftL#` lgWordSize#
+        sz# = bigNatSize# m# `iShiftL#` lgWordSize#
         i# = i' *# sz#
   {-# INLINE readOffAddr# #-}
 
@@ -501,14 +499,14 @@ instance KnownNat m => P.Prim (Mod m) where
     NatS#{} -> case x of
       NatS# x# -> P.writeByteArray# marr i' (W# x#) token
       _        -> error "argument is larger than modulus"
-    NatJ# m# -> case x of
+    NatJ# (BN# m#) -> case x of
       NatS# x# -> case P.writeByteArray# marr i# (W# x#) token of
         newToken -> P.setByteArray# marr (i# +# 1#) (sz# -# 1#) (0 :: Word) newToken
-      NatJ# bn -> case internal (unsafeIOToPrim (exportBigNatToMutableByteArray bn (unsafeCoerce# marr) (int2Word# (i# `iShiftL#` lgWordSize#)) 0#) :: ST s Word) token of
-        (# newToken, W# l# #) -> P.setByteArray# marr (i# `iShiftL#` lgWordSize# +# word2Int# l#) (sz# `iShiftL#` lgWordSize# -# word2Int# l#) (0 :: Word8) newToken
+      NatJ# (BN# bn) -> case bigNatToMutableByteArrayLE# bn (unsafeCoerce# marr) (int2Word# (i# `iShiftL#` lgWordSize#)) token of
+        (# newToken, l# #) -> P.setByteArray# marr (i# `iShiftL#` lgWordSize# +# word2Int# l#) (sz# `iShiftL#` lgWordSize# -# word2Int# l#) (0 :: Word8) newToken
       where
         !(I# lgWordSize#) = lgWordSize
-        !sz@(I# sz#) = I# (sizeofBigNat# m#)
+        !sz@(I# sz#) = I# (bigNatSize# m#)
         !(I# i#)     = I# i' * sz
   {-# INLINE writeByteArray# #-}
 
@@ -516,14 +514,14 @@ instance KnownNat m => P.Prim (Mod m) where
     NatS#{} -> case x of
       NatS# x# -> P.writeOffAddr# marr i' (W# x#) token
       _        -> error "argument is larger than modulus"
-    NatJ# m# -> case x of
+    NatJ# (BN# m#) -> case x of
       NatS# x# -> case P.writeOffAddr# marr i# (W# x#) token of
         newToken -> P.setOffAddr# marr (i# +# 1#) (sz# -# 1#) (0 :: Word) newToken
-      NatJ# bn -> case internal (unsafeIOToPrim (exportBigNatToAddr bn (marr `plusAddr#` (i# `iShiftL#` lgWordSize#)) 0#) :: ST s Word) token of
-        (# newToken, W# l# #) -> P.setOffAddr# marr (i# `iShiftL#` lgWordSize# +# word2Int# l#) (sz# `iShiftL#` lgWordSize# -# word2Int# l#) (0 :: Word8) newToken
+      NatJ# (BN# bn) -> case bigNatToAddrLE# bn (marr `plusAddr#` (i# `iShiftL#` lgWordSize#)) token of
+        (# newToken, l# #) -> P.setOffAddr# marr (i# `iShiftL#` lgWordSize# +# word2Int# l#) (sz# `iShiftL#` lgWordSize# -# word2Int# l#) (0 :: Word8) newToken
       where
         !(I# lgWordSize#) = lgWordSize
-        !sz@(I# sz#) = I# (sizeofBigNat# m#)
+        !sz@(I# sz#) = I# (bigNatSize# m#)
         !(I# i#)   = I# i' * sz
   {-# INLINE writeOffAddr# #-}
 
@@ -532,11 +530,11 @@ instance KnownNat m => P.Prim (Mod m) where
     NatS#{} -> case x of
       NatS# x# -> P.setByteArray# marr off len (W# x#) token
       _        -> error "argument is larger than modulus"
-    NatJ# m# -> case P.writeByteArray# marr off mx token of
+    NatJ# (BN# m#) -> case P.writeByteArray# marr off mx token of
       newToken -> doSet (sz `iShiftL#` lgWordSize#) newToken
       where
         !(I# lgWordSize#) = lgWordSize
-        sz = sizeofBigNat# m#
+        sz = bigNatSize# m#
         off' = (off *# sz) `iShiftL#` lgWordSize#
         len' = (len *# sz) `iShiftL#` lgWordSize#
         doSet i tkn
@@ -550,11 +548,11 @@ instance KnownNat m => P.Prim (Mod m) where
     NatS#{} -> case x of
       NatS# x# -> P.setOffAddr# marr off len (W# x#) token
       _        -> error "argument is larger than modulus"
-    NatJ# m# -> case P.writeOffAddr# marr off mx token of
+    NatJ# (BN# m#) -> case P.writeOffAddr# marr off mx token of
       newToken -> doSet (sz `iShiftL#` lgWordSize#) newToken
       where
         !(I# lgWordSize#) = lgWordSize
-        sz = sizeofBigNat# m#
+        sz = bigNatSize# m#
         off' = (off *# sz) `iShiftL#` lgWordSize#
         len' = (len *# sz) `iShiftL#` lgWordSize#
         doSet i tkn -- = tkn

@@ -13,13 +13,11 @@
 
 {-# LANGUAGE BangPatterns               #-}
 {-# LANGUAGE CPP                        #-}
-{-# LANGUAGE DataKinds                  #-}
 {-# LANGUAGE DeriveGeneric              #-}
 {-# LANGUAGE DerivingStrategies         #-}
 {-# LANGUAGE GeneralizedNewtypeDeriving #-}
 {-# LANGUAGE MagicHash                  #-}
 {-# LANGUAGE MultiParamTypeClasses      #-}
-{-# LANGUAGE PolyKinds                  #-}
 {-# LANGUAGE TypeApplications           #-}
 {-# LANGUAGE TypeFamilies               #-}
 {-# LANGUAGE UnboxedTuples              #-}
@@ -54,8 +52,9 @@ import qualified Data.Vector.Unboxed         as U
 import Foreign.Storable (Storable)
 import GHC.Exts
 import GHC.Generics
-import GHC.Integer.GMP.Internals
 import GHC.Natural (Natural(..))
+import GHC.Num.BigNat
+import GHC.Num.Integer
 import GHC.TypeNats (Nat, KnownNat, natVal)
 
 -- | This data type represents
@@ -151,14 +150,14 @@ mulMod NatJ#{} _ _ = tooLargeModulus
 
 fromIntegerMod :: Natural -> Integer -> Word
 fromIntegerMod (NatS# 0##) !_ = throw DivideByZero
-fromIntegerMod (NatS# m#) (S# x#) =
+fromIntegerMod (NatS# m#) (IS x#) =
   if isTrue# (x# >=# 0#)
     then W# (int2Word# x# `remWord#` m#)
     else negateMod (NatS# m#) (W# (int2Word# (negateInt# x#) `remWord#` m#))
-fromIntegerMod (NatS# m#) (Jp# x#) =
-  W# (x# `remBigNatWord` m#)
-fromIntegerMod (NatS# m#) (Jn# x#) =
-  negateMod (NatS# m#) (W# (x# `remBigNatWord` m#))
+fromIntegerMod (NatS# m#) (IP x#) =
+  W# (x# `bigNatRemWord#` m#)
+fromIntegerMod (NatS# m#) (IN x#) =
+  negateMod (NatS# m#) (W# (x# `bigNatRemWord#` m#))
 fromIntegerMod NatJ#{} _ = tooLargeModulus
 
 #ifdef MIN_VERSION_semirings
@@ -166,7 +165,7 @@ fromIntegerMod NatJ#{} _ = tooLargeModulus
 fromNaturalMod :: Natural -> Natural -> Word
 fromNaturalMod (NatS# 0##) !_ = throw DivideByZero
 fromNaturalMod (NatS# m#) (NatS# x#) = W# (x# `remWord#` m#)
-fromNaturalMod (NatS# m#) (NatJ# x#) = W# (x# `remBigNatWord` m#)
+fromNaturalMod (NatS# m#) (NatJ# (BN# x#)) = W# (x# `bigNatRemWord#` m#)
 fromNaturalMod NatJ#{} _ = tooLargeModulus
 
 getModulus :: Natural -> Word
