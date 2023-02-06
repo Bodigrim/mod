@@ -60,9 +60,10 @@ benchSum = bgroup "Sum"
     measure name p = bench name $ whnf (sumN p) lim
     {-# INLINE measure #-}
 
-    sumN :: (Eq (t P), Num (t P)) => Proxy t -> Int -> t P
+    sumN :: forall t. (Eq (t P), Num (t P)) => Proxy t -> Int -> t P
     sumN = const $ \n -> go 0 (fromIntegral n)
       where
+        go :: t P -> t P -> t P
         go !acc 0 = acc
         go acc n = go (acc + n) (n - 1)
     {-# INLINE sumN #-}
@@ -71,6 +72,7 @@ benchSum = bgroup "Sum"
     sumNModular :: Int -> Numeric.Modular.Mod P
     sumNModular = \n -> go 0 (fromIntegral n)
       where
+        go :: Numeric.Modular.Mod P -> Numeric.Modular.Mod P -> Numeric.Modular.Mod P
         go acc@(forceModular -> !_) 0 = acc
         go acc n = go (acc + n) (n - 1)
     {-# INLINE sumNModular #-}
@@ -101,9 +103,10 @@ benchProduct = bgroup "Product"
     measure name p = bench name $ whnf (productN p) lim
     {-# INLINE measure #-}
 
-    productN :: (Eq (t P), Num (t P)) => Proxy t -> Int -> t P
+    productN :: forall t. (Eq (t P), Num (t P)) => Proxy t -> Int -> t P
     productN = const $ \n -> go 1 (fromIntegral n)
       where
+        go :: t P -> t P -> t P
         go !acc 0 = acc
         go acc n = go (acc * n) (n - 1)
     {-# INLINE productN #-}
@@ -112,6 +115,7 @@ benchProduct = bgroup "Product"
     productNModular :: Int -> Numeric.Modular.Mod P
     productNModular = \n -> go 1 (fromIntegral n)
       where
+        go :: Numeric.Modular.Mod P -> Numeric.Modular.Mod P -> Numeric.Modular.Mod P
         go acc@(forceModular -> !_) 0 = acc
         go acc n = go (acc * n) (n - 1)
     {-# INLINE productNModular #-}
@@ -136,9 +140,10 @@ benchInversion = bgroup "Inversion"
     measure name p = bench name $ whnf (invertN p) lim
     {-# INLINE measure #-}
 
-    invertN :: (Eq (t P), Fractional (t P)) => Proxy t -> Int -> t P
+    invertN :: forall t. (Eq (t P), Fractional (t P)) => Proxy t -> Int -> t P
     invertN = const $ \n -> go 0 (fromIntegral n)
       where
+        go :: t P -> t P -> t P
         go !acc 0 = acc
         go acc n = go (acc + recip n) (n - 1)
     {-# INLINE invertN #-}
@@ -168,9 +173,10 @@ benchPower = bgroup "Power"
     measure name p = bench name $ whnf (powerN p) lim
     {-# INLINE measure #-}
 
-    powerN :: (Eq (t P), Num (t P)) => Proxy t -> Int -> t P
+    powerN :: forall t. (Eq (t P), Num (t P)) => Proxy t -> Int -> t P
     powerN = const $ go 0
       where
+        go :: t P -> Int -> t P
         go !acc 0 = acc
         go acc n = go (acc + 2 ^ n) (n - 1)
     {-# INLINE powerN #-}
@@ -179,6 +185,7 @@ benchPower = bgroup "Power"
     powerNModular :: Int -> Numeric.Modular.Mod P
     powerNModular = go 0
       where
+        go :: Numeric.Modular.Mod P -> Int -> Numeric.Modular.Mod P
         go acc@(forceModular -> !_) 0 = acc
         go acc n = go (acc + 2 ^ n) (n - 1)
     {-# INLINE powerNModular #-}
