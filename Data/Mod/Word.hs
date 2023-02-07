@@ -131,11 +131,22 @@ negateMod _ (W# 0##) = W# 0##
 negateMod (NatS# m#) (W# x#) = W# (m# `minusWord#` x#)
 negateMod NatJ#{} _ = tooLargeModulus
 
+halfWord :: Word
+halfWord = 1 `shiftL` (finiteBitSize (0 :: Word) `shiftR` 1)
+
 mulMod :: Natural -> Word -> Word -> Word
-mulMod (NatS# m#) (W# x#) (W# y#) = W# r#
+mulMod (NatS# m#) (W# x#) (W# y#)
+  -- https://gitlab.haskell.org/ghc/ghc/-/issues/22933
+  | W# m# <= halfWord = W# (timesWord# x# y# `remWord#` m#)
+  | otherwise = W# r#
   where
     !(# z1#, z2# #) = timesWord2# x# y#
+#ifdef aarch64_HOST_ARCH
+    -- https://gitlab.haskell.org/ghc/ghc/-/issues/22966
+    r# = bigNatFromWord2# z1# z2# `bigNatRemWord#` m#
+#else
     !(# _, r# #) = quotRemWord2# z1# z2# m#
+#endif
 mulMod NatJ#{} _ _ = tooLargeModulus
 
 fromIntegerMod :: Natural -> Integer -> Word

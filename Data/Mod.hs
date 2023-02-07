@@ -158,11 +158,22 @@ negateMod NatS#{} _ = brokenInvariant
 negateMod (NatJ# (BN# m#)) (NatS# x#) = bigNatToNat (m# `bigNatSubWordUnsafe#` x#)
 negateMod (NatJ# (BN# m#)) (NatJ# (BN# x#)) = bigNatToNat (m# `bigNatSubUnsafe` x#)
 
+halfWord :: Word
+halfWord = 1 `shiftL` (finiteBitSize (0 :: Word) `shiftR` 1)
+
 mulMod :: Natural -> Natural -> Natural -> Natural
-mulMod (NatS# m#) (NatS# x#) (NatS# y#) = NatS# r#
+mulMod (NatS# m#) (NatS# x#) (NatS# y#)
+  -- https://gitlab.haskell.org/ghc/ghc/-/issues/22933
+  | W# m# <= halfWord = NatS# (timesWord# x# y# `remWord#` m#)
+  | otherwise = NatS# r#
   where
     !(# z1#, z2# #) = timesWord2# x# y#
+#ifdef aarch64_HOST_ARCH
+    -- https://gitlab.haskell.org/ghc/ghc/-/issues/22966
+    r# = bigNatFromWord2# z1# z2# `bigNatRemWord#` m#
+#else
     !(# _, r# #) = quotRemWord2# z1# z2# m#
+#endif
 mulMod NatS#{} _ _ = brokenInvariant
 mulMod (NatJ# (BN# m#)) (NatS# x#) (NatS# y#) =
   bigNatToNat (bigNatFromWord2# z1# z2# `bigNatRem` m#)
