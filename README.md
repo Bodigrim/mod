@@ -95,10 +95,10 @@ which can be reproduced by running `cabal bench`.
 
 | Discipline  | `Data.Mod.Word`  | `Data.Mod`  | `modular` | `modular-arithmetic` | `finite-typelits` | `finite-field`
 | :---------- | :--------------: | :---------: | :-------: | :------------------: | :---------------: | :------------:
-| Sum         |   0.25x          |    1x       |  11.4x    |      5.7x            |  8.9x             | 8.6x
-| Product     |   0.95x          |    1x       |  9.6x     |      4.8x            |  7.0x             | 7.0x
-| Inversion   |   0.95x          |    1x       |  N/A      |      2.6x            |  N/A              | 3.0x
-| Power       |   0.90x          |    1x       |  6.9x     |      3.8x            |  5.0x             | 4.9x
+| Sum         |   0.44x          |    1x       |  16.6x    |      8.9x            |  14.7x            | 14.2x
+| Product     |   0.95x          |    1x       |  7.8x     |      4.5x            |  7.0x             | 7.0x
+| Inversion   |   0.54x          |    1x       |  N/A      |      3.2x            |  N/A              | 1.8x
+| Power       |   0.29x          |    1x       |  2.0x     |      1.2x            |  1.4x             | 1.5x
 
 ## What's next?
 
