@@ -1,3 +1,11 @@
+# 0.2.0.0
+
+* Breaking change: redesign `GcdDomain` and `Euclidean` instances.
+* Migrate from `integer-gmp` to `ghc-bignum`.
+* Remove `(^) -> (^%)` rewrite rule, it does not fire.
+* Plug loopholes to inhabit `Mod 0`.
+* Work around performance degradation on ARM.
+
 # 0.1.2.2
 
 * Work around an issue with [`fromIntegral`](https://gitlab.haskell.org/ghc/ghc/-/issues/19411) in GHC 9.0.1.
