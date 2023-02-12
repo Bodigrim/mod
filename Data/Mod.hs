@@ -34,6 +34,7 @@ import Control.Exception
 import Control.DeepSeq
 import Control.Monad
 import Data.Bits
+import Data.Mod.Compat (timesWord2#, remWord2#)
 import Data.Ratio
 import Data.Word (Word8)
 #ifdef MIN_VERSION_semirings
@@ -51,7 +52,7 @@ import qualified Data.Vector.Primitive       as P
 import Foreign (copyBytes)
 #endif
 import Foreign.Storable (Storable(..))
-import GHC.Exts
+import GHC.Exts hiding (timesWord2#, quotRemWord2#)
 import GHC.Generics
 import GHC.IO (IO(..))
 import GHC.Natural (Natural(..), powModNatural)
@@ -163,17 +164,11 @@ halfWord = 1 `shiftL` (finiteBitSize (0 :: Word) `shiftR` 1)
 
 mulMod :: Natural -> Natural -> Natural -> Natural
 mulMod (NatS# m#) (NatS# x#) (NatS# y#)
-  -- https://gitlab.haskell.org/ghc/ghc/-/issues/22933
   | W# m# <= halfWord = NatS# (timesWord# x# y# `remWord#` m#)
   | otherwise = NatS# r#
   where
-    !(# z1#, z2# #) = timesWord2# x# y#
-#ifdef aarch64_HOST_ARCH
-    -- https://gitlab.haskell.org/ghc/ghc/-/issues/22966
-    r# = bigNatFromWord2# z1# z2# `bigNatRemWord#` m#
-#else
-    !(# _, r# #) = quotRemWord2# z1# z2# m#
-#endif
+    !(# hi#, lo# #) = timesWord2# x# y#
+    !r# = remWord2# lo# hi# m#
 mulMod NatS#{} _ _ = brokenInvariant
 mulMod (NatJ# (BN# m#)) (NatS# x#) (NatS# y#) =
   bigNatToNat (bigNatFromWord2# z1# z2# `bigNatRem` m#)
