@@ -150,8 +150,8 @@ benchInversion = bgroup "Inversion"
 
 benchPower :: Benchmark
 benchPower = bgroup "Power"
-  [ measure "Data.Mod" (Proxy @Data.Mod.Mod)
-  , cmp $ measure "Data.Mod.Word" (Proxy @Data.Mod.Word.Mod)
+  [ bench "Data.Mod" $ nf powerNMod lim
+  , cmp $ bench "Data.Mod.Word" $ nf powerNModWord lim
 #ifdef MIN_VERSION_finite_field
   , cmp $ measure "finite-field" (Proxy @Data.FiniteField.PrimeField.PrimeField)
 #endif
@@ -169,6 +169,23 @@ benchPower = bgroup "Power"
     cmp = bcompare "$NF == \"Data.Mod\" && $(NF-1) == \"Power\""
     lim = 1000000
 
+    powerNMod :: Int -> Data.Mod.Mod P
+    powerNMod = go 0
+      where
+        go :: Data.Mod.Mod P -> Int -> Data.Mod.Mod P
+        go !acc 0 = acc
+        go acc n = go (acc + 2 Data.Mod.^% n) (n - 1)
+    {-# INLINE powerNMod #-}
+
+    powerNModWord :: Int -> Data.Mod.Word.Mod P
+    powerNModWord = go 0
+      where
+        go :: Data.Mod.Word.Mod P -> Int -> Data.Mod.Word.Mod P
+        go !acc 0 = acc
+        go acc n = go (acc + 2 Data.Mod.Word.^% n) (n - 1)
+    {-# INLINE powerNModWord #-}
+
+#if defined(MIN_VERSION_finite_field) || defined(MIN_VERSION_modular_arithmetic)
     measure :: (Eq (t P), Num (t P)) => String -> Proxy t -> Benchmark
     measure name p = bench name $ whnf (powerN p) lim
     {-# INLINE measure #-}
@@ -180,6 +197,7 @@ benchPower = bgroup "Power"
         go !acc 0 = acc
         go acc n = go (acc + 2 ^ n) (n - 1)
     {-# INLINE powerN #-}
+#endif
 
 #ifdef MIN_VERSION_modular
     powerNModular :: Int -> Numeric.Modular.Mod P
