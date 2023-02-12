@@ -1,6 +1,7 @@
 # 0.2.0.0
 
 * Breaking change: redesign `GcdDomain` and `Euclidean` instances.
+* Add `instance Read` and `instance Real`.
 * Migrate from `integer-gmp` to `ghc-bignum`.
 * Remove `(^) -> (^%)` rewrite rule, it does not fire.
 * Plug loopholes to inhabit `Mod 0`.
