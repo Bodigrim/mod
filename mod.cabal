@@ -46,8 +46,9 @@ library
       vector >= 0.12
   exposed-modules:
     Data.Mod
-    Data.Mod.Compat
     Data.Mod.Word
+  other-modules:
+    Data.Mod.Compat
   default-language: Haskell2010
   ghc-options: -Wall -O2 -Wno-deprecations -Wcompat
 
