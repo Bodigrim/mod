@@ -54,6 +54,7 @@ import GHC.Natural (Natural(..))
 import GHC.Num.BigNat
 import GHC.Num.Integer
 import GHC.TypeNats (Nat, KnownNat, natVal)
+import Text.Read (Read(readPrec))
 
 -- | This data type represents
 -- <https://en.wikipedia.org/wiki/Modular_arithmetic#Integers_modulo_n integers modulo m>,
@@ -90,6 +91,14 @@ instance NFData (Mod m)
 
 instance Show (Mod m) where
   show (Mod x) = show x
+
+-- | Wrapping behaviour, similar to
+-- the existing @instance@ 'Read' 'Int'.
+instance KnownNat m => Read (Mod m) where
+  readPrec = fromInteger <$> readPrec
+
+instance KnownNat m => Real (Mod m) where
+  toRational (Mod x) = toRational x
 
 instance KnownNat m => Enum (Mod m) where
   succ x = if x == maxBound then throw Overflow  else coerce (succ @Word) x
