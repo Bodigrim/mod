@@ -1,5 +1,5 @@
 name:          mod
-version:       0.2.0.0
+version:       0.2.0.1
 cabal-version: >=1.10
 build-type:    Simple
 license:       MIT
@@ -19,6 +19,7 @@ tested-with:   GHC ==9.0.2 GHC ==9.2.5 GHC ==9.4.4 GHC ==9.6.1
 extra-source-files:
   changelog.md
   README.md
+  cbits/aarch64.h
 
 source-repository head
   type: git

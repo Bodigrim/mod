@@ -1,3 +1,7 @@
+# 0.2.0.1
+
+* Fix build on `aarch64`.
+
 # 0.2.0.0
 
 * Breaking change: redesign `GcdDomain` and `Euclidean` instances.
