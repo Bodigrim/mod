@@ -63,7 +63,7 @@ test-suite mod-tests
     mod,
     quickcheck-classes-base,
     tasty >=0.10,
-    tasty-quickcheck >=0.9 && <0.11
+    tasty-quickcheck >=0.9 && <0.12
   if flag(semirings)
     build-depends:
       containers,
