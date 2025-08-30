@@ -442,11 +442,10 @@ mx@(Mod !x) ^% a = case natVal mx of
       f b  e acc = f (mulMod m b b) (e `P.quot` 2) (if odd e then mulMod m b acc else acc)
 {-# INLINABLE [1] (^%) #-}
 
-{-# SPECIALISE [1] (^%) ::
-  KnownNat m => Mod m -> Integer -> Mod m,
-  KnownNat m => Mod m -> Natural -> Mod m,
-  KnownNat m => Mod m -> Int     -> Mod m,
-  KnownNat m => Mod m -> Word    -> Mod m #-}
+{-# SPECIALISE [1] (^%) :: KnownNat m => Mod m -> Integer -> Mod m #-}
+{-# SPECIALISE [1] (^%) :: KnownNat m => Mod m -> Natural -> Mod m #-}
+{-# SPECIALISE [1] (^%) :: KnownNat m => Mod m -> Int     -> Mod m #-}
+{-# SPECIALISE [1] (^%) :: KnownNat m => Mod m -> Word    -> Mod m #-}
 
 {-# RULES
 "powMod/2/Integer"     forall x. x ^% (2 :: Integer) = let u = x in u*u

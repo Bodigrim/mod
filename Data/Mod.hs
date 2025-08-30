@@ -383,11 +383,10 @@ mx ^% a
 #endif
 {-# INLINABLE [1] (^%) #-}
 
-{-# SPECIALISE [1] (^%) ::
-  KnownNat m => Mod m -> Integer -> Mod m,
-  KnownNat m => Mod m -> Natural -> Mod m,
-  KnownNat m => Mod m -> Int     -> Mod m,
-  KnownNat m => Mod m -> Word    -> Mod m #-}
+{-# SPECIALISE [1] (^%) :: KnownNat m => Mod m -> Integer -> Mod m #-}
+{-# SPECIALISE [1] (^%) :: KnownNat m => Mod m -> Natural -> Mod m #-}
+{-# SPECIALISE [1] (^%) :: KnownNat m => Mod m -> Int     -> Mod m #-}
+{-# SPECIALISE [1] (^%) :: KnownNat m => Mod m -> Word    -> Mod m #-}
 
 {-# RULES
 "powMod/2/Integer"     forall x. x ^% (2 :: Integer) = let u = x in u*u
