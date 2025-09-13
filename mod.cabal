@@ -15,7 +15,7 @@ description:
   Originally part of the <https://hackage.haskell.org/package/arithmoi arithmoi> package.
 category:      Math, Number Theory
 author:        Andrew Lelechenko <andrew.lelechenko@gmail.com>
-tested-with:   GHC ==9.0.2 GHC ==9.2.8 GHC ==9.4.8 GHC ==9.6.7 GHC ==9.8.4 GHC ==9.10.2 GHC ==9.12.2
+tested-with:   GHC ==9.0.2 GHC ==9.2.8 GHC ==9.4.8 GHC ==9.6.7 GHC ==9.8.4 GHC ==9.10.2 GHC ==9.12.2 GHC ==9.14.1
 extra-source-files:
   changelog.md
   README.md
