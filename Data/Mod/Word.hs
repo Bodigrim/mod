@@ -335,6 +335,8 @@ invertMod :: KnownNat m => Mod m -> Maybe (Mod m)
 invertMod mx@(Mod !x) = case natVal mx of
   NatJ#{}   -> tooLargeModulus
   NatS# 0## -> Nothing
+  -- See https://gitlab.haskell.org/ghc/ghc/-/issues/26017
+  NatS# 1## -> Just 0
   NatS# m#  -> Mod <$> invertModWord x (W# m#)
 
 invertModWord :: Word -> Word -> Maybe Word

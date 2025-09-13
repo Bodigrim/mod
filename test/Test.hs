@@ -58,6 +58,8 @@ main = defaultMain $ testGroup "All" $
   [ testGroup "Mod 1" $
     testProperty "fromInteger"
       (fromIntegerProp (Proxy :: Proxy 1)) :
+    testProperty "invertMod"
+      (invertMod (0 :: Mod 1) == Just 0) :
     map lawsToTest (laws1 (Proxy :: Proxy (Mod 1)))
   , testMod(2310)
   , testMod(2^16-1)
@@ -103,6 +105,8 @@ main = defaultMain $ testGroup "All" $
   , testGroup "Word.Mod 1" $
     testProperty "fromInteger"
       (fromIntegerWordProp (Proxy :: Proxy 1)) :
+    testProperty "invertMod"
+      (Word.invertMod (0 :: Word.Mod 1) == Just 0) :
     map lawsToTest (laws1 (Proxy :: Proxy (Word.Mod 1)))
   , testMod(2310)
   , testMod(2^16-1)
