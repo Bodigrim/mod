@@ -1,3 +1,7 @@
+# 0.2.1.0
+
+* Fix `invertMod (0 :: Mod 1)`.
+
 # 0.2.0.1
 
 * Fix build on `aarch64`.
