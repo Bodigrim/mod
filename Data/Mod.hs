@@ -73,16 +73,17 @@ import Text.Read (Read(readPrec))
 -- 1
 --
 -- __Note:__ 'Mod' 0 has no inhabitants, eventhough \( \mathbb{Z}/0\mathbb{Z} \) is technically isomorphic to \( \mathbb{Z} \).
-newtype Mod (m :: Nat) = Mod
-  { unMod :: Natural
-  -- ^ The canonical representative of the residue class,
-  -- always between 0 and \( m - 1 \) (inclusively).
-  --
-  -- >>> :set -XDataKinds
-  -- >>> -1 :: Mod 10
-  -- 9
-  }
+newtype Mod (m :: Nat) = Mod Natural
   deriving (Eq, Ord, Generic)
+
+-- | The canonical representative of the residue class,
+-- always between 0 and \( m - 1 \) (inclusively).
+--
+-- >>> :set -XDataKinds
+-- >>> -1 :: Mod 10
+-- 9
+unMod :: Mod m -> Natural
+unMod (Mod w) = w
 
 instance NFData (Mod m)
 
