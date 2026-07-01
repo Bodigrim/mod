@@ -435,6 +435,7 @@ half x = x `shiftR` 1
 (^%) :: (KnownNat m, Integral a) => Mod m -> a -> Mod m
 mx@(Mod !x) ^% a = case natVal mx of
   NatJ#{} -> tooLargeModulus
+  1 -> Mod 0
   m@(NatS# _)
     | a < 0 -> case invertMod mx of
       Nothing      -> throw DivideByZero

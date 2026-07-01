@@ -79,7 +79,8 @@ main = defaultMain $ testGroup "All" $
     , testProperty "invertMod"   invertModRandomProp
     , testProperty "powMod"      powModRandomProp
     , testProperty "powMod on sum" powModRandomAdditiveProp
-    , testProperty "powMod special case" powModCase
+    , testProperty "powMod special case 1" powModCase1
+    , testProperty "powMod special case 2" powModCase2
     , testProperty "powMod on minBound" powModMinBoundProp
 #ifdef MIN_VERSION_semirings
     , testProperty "divide"  dividePropRandom
@@ -128,7 +129,8 @@ main = defaultMain $ testGroup "All" $
     , testProperty "invertMod near maxBound" invertModWordRandomPropNearMaxBound
     , testProperty "powMod"      powModWordRandomProp
     , testProperty "powMod on sum" powModWordRandomAdditiveProp
-    , testProperty "powMod special case" powModWordCase
+    , testProperty "powMod special case 1" powModWordCase1
+    , testProperty "powMod special case 2" powModWordCase2
     , testProperty "powMod on minBound" powModWordMinBoundProp
 #ifdef MIN_VERSION_semirings
     , testProperty "divide"  divideWordPropRandom
@@ -214,7 +216,7 @@ instance KnownNat m => Arbitrary (Word.Mod m) where
 -- fromInteger
 
 fromIntegerRandomProp :: Positive Integer -> Integer -> Property
-fromIntegerRandomProp (Positive m) n = m > 1 ==> case someNatVal (fromInteger m) of
+fromIntegerRandomProp (Positive m) n = m >= 1 ==> case someNatVal (fromInteger m) of
   SomeNat p -> fromIntegerProp p n
 
 fromIntegerProp :: forall m. KnownNat m => Proxy m -> Integer -> Property
@@ -224,7 +226,7 @@ fromIntegerProp p n = unMod m === fromInteger (n `mod` toInteger (natVal p))
     m = fromInteger n
 
 fromIntegerWordRandomProp :: Word -> Integer -> Property
-fromIntegerWordRandomProp m n = m > 1 ==> case someNatVal (fromIntegral m) of
+fromIntegerWordRandomProp m n = m >= 1 ==> case someNatVal (fromIntegral m) of
   SomeNat p -> fromIntegerWordProp p n
 
 fromIntegerWordProp :: forall m. KnownNat m => Proxy m -> Integer -> Property
@@ -237,7 +239,7 @@ fromIntegerWordProp p n = Word.unMod m === fromInteger (n `mod` toInteger (natVa
 -- invertMod
 
 invertModRandomProp :: Positive Integer -> Integer -> Property
-invertModRandomProp (Positive m) n = m > 1 ==> case someNatVal (fromInteger m) of
+invertModRandomProp (Positive m) n = m >= 1 ==> case someNatVal (fromInteger m) of
   SomeNat (Proxy :: Proxy m) -> invertModProp (fromInteger n :: Mod m)
 
 invertModProp :: KnownNat m => Mod m -> Property
@@ -248,7 +250,7 @@ invertModProp x = case invertMod x of
     g = gcd (unMod x) (fromIntegral (natVal x))
 
 invertModWordRandomProp :: Word -> Integer -> Property
-invertModWordRandomProp m n = m > 1 ==> case someNatVal (fromIntegral m) of
+invertModWordRandomProp m n = m >= 1 ==> case someNatVal (fromIntegral m) of
   SomeNat (Proxy :: Proxy m) -> invertModWordProp (fromInteger n :: Word.Mod m)
 
 invertModWordRandomPropNearMaxBound :: Word -> Integer -> Property
@@ -267,7 +269,7 @@ invertModWordProp x = case Word.invertMod x of
 -- powMod
 
 powModRandomProp :: Positive Integer -> Integer -> Int -> Property
-powModRandomProp (Positive m) x n = m > 1 ==> case someNatVal (fromInteger m) of
+powModRandomProp (Positive m) x n = m >= 1 ==> case someNatVal (fromInteger m) of
   SomeNat (Proxy :: Proxy m) -> powModProp (fromInteger x :: Mod m) n
 
 powModProp :: KnownNat m => Mod m -> Int -> Property
@@ -278,7 +280,7 @@ powModProp x n
     Just x' -> x ^% n === getProduct (stimes (-n) (Product x'))
 
 powModRandomAdditiveProp :: Positive Integer -> Integer -> Huge Integer -> Huge Integer -> Property
-powModRandomAdditiveProp (Positive m) x (Huge n1) (Huge n2) = m > 1 ==> case someNatVal (fromInteger m) of
+powModRandomAdditiveProp (Positive m) x (Huge n1) (Huge n2) = m >= 1 ==> case someNatVal (fromInteger m) of
   SomeNat (Proxy :: Proxy m) -> powModAdditiveProp (fromInteger x :: Mod m) n1 n2
 
 powModAdditiveProp :: KnownNat m => Mod m -> Integer -> Integer -> Property
@@ -288,10 +290,13 @@ powModAdditiveProp x n1 n2
   | otherwise
   = (x ^% n1) * (x ^% n2) === x ^% (n1 + n2)
 
-powModCase :: Property
-powModCase = once $ 0 ^% n === (0 :: Mod 2)
+powModCase1 :: Property
+powModCase1 = once $ 0 ^% n === (0 :: Mod 2)
   where
     n = 1 `shiftL` 64 :: Integer
+
+powModCase2 :: Property
+powModCase2 = once $ 1 ^% 0 === (0 :: Mod 1)
 
 powModMinBoundProp :: Positive Integer -> Integer -> Property
 powModMinBoundProp (Positive m) x = case someNatVal (fromIntegral m) of
@@ -301,7 +306,7 @@ powModMinBoundProp (Positive m) x = case someNatVal (fromIntegral m) of
       Just{} -> x' ^% (minBound :: Int) === x' ^% toInteger (minBound :: Int)
 
 powModWordRandomProp :: Word -> Integer -> Int -> Property
-powModWordRandomProp m x k = m > 1 ==> case someNatVal (fromIntegral m) of
+powModWordRandomProp m x k = m >= 1 ==> case someNatVal (fromIntegral m) of
   SomeNat (Proxy :: Proxy m) -> powModWordProp (fromInteger x :: Word.Mod m) k
 
 powModWordProp :: KnownNat m => Word.Mod m -> Int -> Property
@@ -312,7 +317,7 @@ powModWordProp x n
     Just x' -> x Word.^% n === getProduct (stimes (-n) (Product x'))
 
 powModWordRandomAdditiveProp :: Word -> Integer -> Huge Integer -> Huge Integer -> Property
-powModWordRandomAdditiveProp m x (Huge n1) (Huge n2) = m > 1 ==> case someNatVal (fromIntegral m) of
+powModWordRandomAdditiveProp m x (Huge n1) (Huge n2) = m >= 1 ==> case someNatVal (fromIntegral m) of
   SomeNat (Proxy :: Proxy m) -> powModWordAdditiveProp (fromInteger x :: Word.Mod m) n1 n2
 
 powModWordAdditiveProp :: KnownNat m => Word.Mod m -> Integer -> Integer -> Property
@@ -322,10 +327,13 @@ powModWordAdditiveProp x n1 n2
   | otherwise
   = (x Word.^% n1) * (x Word.^% n2) === x Word.^% (n1 + n2)
 
-powModWordCase :: Property
-powModWordCase = once $ 0 Word.^% n === (0 :: Word.Mod 2)
+powModWordCase1 :: Property
+powModWordCase1 = once $ 0 Word.^% n === (0 :: Word.Mod 2)
   where
     n = 1 `shiftL` 64 :: Integer
+
+powModWordCase2 :: Property
+powModWordCase2 = once $ 1 Word.^% 0 === (0 :: Word.Mod 1)
 
 powModWordMinBoundProp :: Word -> Integer -> Property
 powModWordMinBoundProp m x = m >= 1 ==> case someNatVal (fromIntegral m) of
