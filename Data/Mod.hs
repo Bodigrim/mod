@@ -269,11 +269,11 @@ instance KnownNat m => GcdDomain (Mod m) where
   gcd (Mod x) (Mod y) = g
     where
       m = natVal g
-      g = Mod $ if m > 1 then Prelude.gcd (Prelude.gcd m x) y else 0
+      g = fromIntegral (Prelude.gcd (Prelude.gcd m x) y)
   lcm (Mod x) (Mod y) = l
     where
       m = natVal l
-      l = Mod $ if m > 1 then Prelude.lcm (Prelude.gcd m x) (Prelude.gcd m y) else 0
+      l = fromIntegral (Prelude.lcm (Prelude.gcd m x) (Prelude.gcd m y))
   coprime x y = Data.Euclidean.gcd x y == one
 
 -- | 'Mod' @m@ is not even an

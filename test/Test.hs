@@ -84,8 +84,10 @@ main = defaultMain $ testGroup "All" $
     , testProperty "powMod on minBound" powModMinBoundProp
 #ifdef MIN_VERSION_semirings
     , testProperty "divide"  dividePropRandom
-    , testProperty "gcd"     gcdIsPrincipalIdealRandom
-    , testProperty "lcm"     lcmIsIntersectionOfIdealsRandom
+    , testProperty "gcd is valid" gcdIsValid
+    , testProperty "gcd is principal ideal" gcdIsPrincipalIdealRandom
+    , testProperty "lcm is valid" lcmIsValid
+    , testProperty "lcm is intersection of ideals" lcmIsIntersectionOfIdealsRandom
     , testProperty "coprime" coprimeGeneratorsRandom
     , testProperty "quotRem" quotRemPropRandom
     , testProperty "degree"  degreePropRandom
@@ -134,8 +136,10 @@ main = defaultMain $ testGroup "All" $
     , testProperty "powMod on minBound" powModWordMinBoundProp
 #ifdef MIN_VERSION_semirings
     , testProperty "divide"  divideWordPropRandom
-    , testProperty "gcd"     gcdIsPrincipalIdealWordRandom
-    , testProperty "lcm"     lcmIsIntersectionOfIdealsWordRandom
+    , testProperty "gcd is valid" gcdIsValidWord
+    , testProperty "gcd is principal ideal" gcdIsPrincipalIdealWordRandom
+    , testProperty "lcm is valid" lcmIsValidWord
+    , testProperty "lcm is intersection of ideals" lcmIsIntersectionOfIdealsWordRandom
     , testProperty "coprime" coprimeGeneratorsWordRandom
     , testProperty "quotRem" quotRemWordPropRandom
     , testProperty "degree"  degreeWordPropRandom
@@ -375,6 +379,14 @@ divideProp x y = case E.divide x y of
   Just z -> x === y * z
   Nothing -> filter ((== x) . (* y)) [minBound .. maxBound] === []
 
+gcdIsValid :: Positive Integer -> Integer -> Integer -> Property
+gcdIsValid (Positive m) x y = case someNatVal (fromInteger m) of
+  SomeNat (Proxy :: Proxy m) -> fromIntegral (unMod g) === g
+    where
+      x' = fromInteger x :: Mod m
+      y' = fromInteger y :: Mod m
+      g = E.gcd x' y'
+
 gcdIsPrincipalIdealRandom :: Positive (Small Integer) -> Integer -> Integer -> Property
 gcdIsPrincipalIdealRandom (Positive (Small m)) x y = case someNatVal (fromInteger m) of
   SomeNat (Proxy :: Proxy m) -> gcdIsPrincipalIdeal (fromInteger x :: Mod m) (fromInteger y)
@@ -384,6 +396,14 @@ gcdIsPrincipalIdeal x y = addIdeals (genIdeal x) (genIdeal y) === genIdeal (E.gc
   where
     genIdeal t = S.fromList $ map (* t) [minBound .. maxBound]
     addIdeals us vs = S.fromList [ u + v | u <- S.toList us, v <- S.toList vs ]
+
+lcmIsValid :: Positive Integer -> Integer -> Integer -> Property
+lcmIsValid (Positive m) x y = case someNatVal (fromInteger m) of
+  SomeNat (Proxy :: Proxy m) -> fromIntegral (unMod l) === l
+    where
+      x' = fromInteger x :: Mod m
+      y' = fromInteger y :: Mod m
+      l = E.lcm x' y'
 
 lcmIsIntersectionOfIdealsRandom :: Positive (Small Integer) -> Integer -> Integer -> Property
 lcmIsIntersectionOfIdealsRandom (Positive (Small m)) x y = case someNatVal (fromInteger m) of
@@ -435,6 +455,14 @@ divideWordProp x y = case E.divide x y of
   Just z -> x === y * z
   Nothing -> filter ((== x) . (* y)) [minBound .. maxBound] === []
 
+gcdIsValidWord :: Positive Word -> Integer -> Integer -> Property
+gcdIsValidWord (Positive m) x y = case someNatVal (fromIntegral m) of
+  SomeNat (Proxy :: Proxy m) -> fromIntegral (Word.unMod g) === g
+    where
+      x' = fromInteger x :: Word.Mod m
+      y' = fromInteger y :: Word.Mod m
+      g = E.gcd x' y'
+
 gcdIsPrincipalIdealWordRandom :: Positive Word -> Word -> Word -> Property
 gcdIsPrincipalIdealWordRandom (Positive m) x y = case someNatVal (fromIntegral m) of
   SomeNat (Proxy :: Proxy m) -> gcdIsPrincipalIdealWord (fromIntegral x :: Word.Mod m) (fromIntegral y)
@@ -444,6 +472,14 @@ gcdIsPrincipalIdealWord x y = addIdeals (genIdeal x) (genIdeal y) === genIdeal (
   where
     genIdeal t = S.fromList $ map (* t) [minBound .. maxBound]
     addIdeals us vs = S.fromList [ u + v | u <- S.toList us, v <- S.toList vs ]
+
+lcmIsValidWord :: Positive Word -> Integer -> Integer -> Property
+lcmIsValidWord (Positive m) x y = case someNatVal (fromIntegral m) of
+  SomeNat (Proxy :: Proxy m) -> fromIntegral (Word.unMod l) === l
+    where
+      x' = fromInteger x :: Word.Mod m
+      y' = fromInteger y :: Word.Mod m
+      l = E.lcm x' y'
 
 lcmIsIntersectionOfIdealsWordRandom :: Positive Word -> Word -> Word -> Property
 lcmIsIntersectionOfIdealsWordRandom (Positive m) x y = case someNatVal (fromIntegral m) of
