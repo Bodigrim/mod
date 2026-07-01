@@ -438,6 +438,7 @@ mx@(Mod !x) ^% a = case natVal mx of
   m@(NatS# _)
     | a < 0 -> case invertMod mx of
       Nothing      -> throw DivideByZero
+      -- Somewhat accidentally this works even if a = minBound
       Just (Mod y) -> Mod $ f y (-a) 1
     | otherwise    -> Mod $ f x a 1
     where

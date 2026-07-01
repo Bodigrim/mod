@@ -10,6 +10,7 @@ module Main (main) where
 
 import Control.Exception (evaluate, try, ArithException(..))
 import Data.Bits
+import Data.Maybe (isNothing)
 import Data.Mod
 import qualified Data.Mod.Word as Word
 import Data.Proxy
@@ -79,6 +80,7 @@ main = defaultMain $ testGroup "All" $
     , testProperty "powMod"      powModRandomProp
     , testProperty "powMod on sum" powModRandomAdditiveProp
     , testProperty "powMod special case" powModCase
+    , testProperty "powMod on minBound" powModMinBoundProp
 #ifdef MIN_VERSION_semirings
     , testProperty "divide"  dividePropRandom
     , testProperty "gcd"     gcdIsPrincipalIdealRandom
@@ -127,6 +129,7 @@ main = defaultMain $ testGroup "All" $
     , testProperty "powMod"      powModWordRandomProp
     , testProperty "powMod on sum" powModWordRandomAdditiveProp
     , testProperty "powMod special case" powModWordCase
+    , testProperty "powMod on minBound" powModWordMinBoundProp
 #ifdef MIN_VERSION_semirings
     , testProperty "divide"  divideWordPropRandom
     , testProperty "gcd"     gcdIsPrincipalIdealWordRandom
@@ -280,7 +283,7 @@ powModRandomAdditiveProp (Positive m) x (Huge n1) (Huge n2) = m > 1 ==> case som
 
 powModAdditiveProp :: KnownNat m => Mod m -> Integer -> Integer -> Property
 powModAdditiveProp x n1 n2
-  | invertMod x == Nothing, n1 < 0 || n2 < 0
+  | isNothing (invertMod x), n1 < 0 || n2 < 0
   = property True
   | otherwise
   = (x ^% n1) * (x ^% n2) === x ^% (n1 + n2)
@@ -289,6 +292,13 @@ powModCase :: Property
 powModCase = once $ 0 ^% n === (0 :: Mod 2)
   where
     n = 1 `shiftL` 64 :: Integer
+
+powModMinBoundProp :: Positive Integer -> Integer -> Property
+powModMinBoundProp (Positive m) x = case someNatVal (fromIntegral m) of
+  SomeNat (Proxy :: Proxy m) -> let x' = fromInteger x :: Mod m in
+    case invertMod x' of
+      Nothing -> property True
+      Just{} -> x' ^% (minBound :: Int) === x' ^% toInteger (minBound :: Int)
 
 powModWordRandomProp :: Word -> Integer -> Int -> Property
 powModWordRandomProp m x k = m > 1 ==> case someNatVal (fromIntegral m) of
@@ -307,7 +317,7 @@ powModWordRandomAdditiveProp m x (Huge n1) (Huge n2) = m > 1 ==> case someNatVal
 
 powModWordAdditiveProp :: KnownNat m => Word.Mod m -> Integer -> Integer -> Property
 powModWordAdditiveProp x n1 n2
-  | Word.invertMod x == Nothing, n1 < 0 || n2 < 0
+  | isNothing (Word.invertMod x), n1 < 0 || n2 < 0
   = property True
   | otherwise
   = (x Word.^% n1) * (x Word.^% n2) === x Word.^% (n1 + n2)
@@ -316,6 +326,13 @@ powModWordCase :: Property
 powModWordCase = once $ 0 Word.^% n === (0 :: Word.Mod 2)
   where
     n = 1 `shiftL` 64 :: Integer
+
+powModWordMinBoundProp :: Word -> Integer -> Property
+powModWordMinBoundProp m x = m >= 1 ==> case someNatVal (fromIntegral m) of
+  SomeNat (Proxy :: Proxy m) -> let x' = fromInteger x :: Word.Mod m in
+    case Word.invertMod x' of
+      Nothing -> property True
+      Just{} -> x' Word.^% (minBound :: Int) === x' Word.^% toInteger (minBound :: Int)
 
 newtype Huge a = Huge { _getHuge :: a }
   deriving (Show)

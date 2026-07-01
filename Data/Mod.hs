@@ -371,12 +371,17 @@ invertModInternal x m = case integerRecipMod# (toInteger x) m of
 -- 7
 -- >>> 4 ^% (-1) :: Mod 10 -- 4 and 10 are not coprime
 -- (*** Exception: divide by zero
-(^%) :: (KnownNat m, Integral a) => Mod m -> a -> Mod m
+(^%) :: forall m a. (KnownNat m, Integral a) => Mod m -> a -> Mod m
 mx ^% a
   | a < 0     = case invertMod mx of
     Nothing ->  throw DivideByZero
-    Just my ->  Mod $ powModNatural (unMod my) (fromIntegral (-a)) (natVal mx)
-  | otherwise = Mod $ powModNatural (unMod mx) (fromIntegral a)    (natVal mx)
+    Just my ->  Mod (powModNatural (unMod my) (absAsNatural a) (natVal mx))
+  | otherwise = Mod $ powModNatural (unMod mx) (fromIntegral a) (natVal mx)
+  where
+    -- Cannot simply 'negate' followed by 'fromIntegral', because for bounded
+    -- types 'negate minBound = minBound' and thus still negative.
+    absAsNatural :: a -> Natural
+    absAsNatural = fromInteger . Prelude.negate . toInteger
 {-# INLINABLE [1] (^%) #-}
 
 {-# SPECIALISE [1] (^%) :: KnownNat m => Mod m -> Integer -> Mod m #-}
