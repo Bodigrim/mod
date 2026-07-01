@@ -1,3 +1,10 @@
+# 0.2.2.0
+
+* Plug a loophole to create `undefined {unMod = 100} :: Mod 1`.
+* Fix `^%` when power is `minBound :: Int`.
+* Fix `^%` when power is 0 and modulo is 1.
+* Fix `Data.Euclidean.{gcd,lcm}` returning invalid inhabitants of `Mod m`.
+
 # 0.2.1.0
 
 * Fix `invertMod (0 :: Mod 1)`.
