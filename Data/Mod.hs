@@ -375,15 +375,8 @@ invertModInternal x m = case integerRecipMod# (toInteger x) m of
 mx ^% a
   | a < 0     = case invertMod mx of
     Nothing ->  throw DivideByZero
-    Just my ->  Mod $ powModNatural (unMod my) (fromIntegral' (-a)) (natVal mx)
-  | otherwise = Mod $ powModNatural (unMod mx) (fromIntegral' a)    (natVal mx)
-  where
-#if __GLASGOW_HASKELL__ == 900 && __GLASGOW_HASKELL_PATCHLEVEL1__ == 1
-    -- Cannot use fromIntegral because of https://gitlab.haskell.org/ghc/ghc/-/issues/19411
-    fromIntegral' = fromInteger . toInteger
-#else
-    fromIntegral' = fromIntegral
-#endif
+    Just my ->  Mod $ powModNatural (unMod my) (fromIntegral (-a)) (natVal mx)
+  | otherwise = Mod $ powModNatural (unMod mx) (fromIntegral a)    (natVal mx)
 {-# INLINABLE [1] (^%) #-}
 
 {-# SPECIALISE [1] (^%) :: KnownNat m => Mod m -> Integer -> Mod m #-}

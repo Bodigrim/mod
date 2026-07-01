@@ -35,7 +35,7 @@ flag vector
 
 library
   build-depends:
-    base >=4.15 && <5,
+    base >=4.15.1 && <5,
     deepseq <1.6,
     ghc-bignum <1.5
   if flag(semirings)
